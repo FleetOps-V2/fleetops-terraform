@@ -176,8 +176,9 @@ module "eks_cluster" {
   public_subnet_ids    = module.networking.public_subnet_ids
   private_subnet_ids   = module.networking.private_subnet_ids
   control_plane_sg_id  = module.networking.eks_control_plane_sg_id
-  admin_iam_user_arns  = var.admin_iam_user_arns
+  admin_iam_user_arns  = []
   public_access_cidrs  = var.eks_public_access_cidrs
+  kms_secrets_key_arn  = module.kms.secrets_key_arn
 }
 
 module "eks_oidc" {
@@ -232,6 +233,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_pods_8080" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_to_pods_80" {
+  #checkov:skip=CKV_AWS_260:Source is scoped to ALB SG via referenced_security_group_id, not 0.0.0.0/0
   security_group_id            = module.eks_cluster.cluster_sg_id
   referenced_security_group_id = module.networking.alb_sg_id
   from_port                    = 80
@@ -245,6 +247,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_pods_80" {
 # ALB is created by the K8s ALB controller after Ingress is deployed — not managed by Terraform.
 # Set var.origin_alb_dns after first K8s deploy, then re-apply to create this record.
 resource "aws_route53_record" "origin_alb_alias" {
+  #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
   count   = var.origin_alb_dns != "" ? 1 : 0
 
   zone_id = module.route53.zone_id
@@ -262,6 +265,7 @@ resource "aws_route53_record" "origin_alb_alias" {
 # (both Ingresses use group.name: fleetops, so one ALB handles both).
 # Set origin_alb_dns after the first K8s deploy, then re-apply.
 resource "aws_route53_record" "argocd" {
+  #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
   count   = var.origin_alb_dns != "" ? 1 : 0
 
   zone_id = module.route53.zone_id
@@ -341,6 +345,7 @@ module "step_functions" {
   source      = "../../modules/step-functions"
   project     = "fleetops"
   environment = var.environment
+  kms_key_arn = module.kms.events_key_arn
 }
 
 module "cloudwatch" {
@@ -349,12 +354,14 @@ module "cloudwatch" {
   environment              = var.environment
   service_alerts_topic_arn = module.sns.service_alerts_topic_arn
   rds_instance_identifier  = module.rds.db_identifier
+  kms_key_arn              = module.kms.events_key_arn
 }
 
 module "cloudtrail" {
   source      = "../../modules/cloudtrail"
   project     = "fleetops"
   environment = var.environment
+  kms_key_arn = module.kms.events_key_arn
 }
 
 module "waf" {
@@ -393,5 +400,98 @@ module "cloudfront" {
   hosted_zone_id      = module.route53.zone_id
 }
 
+# ── Prod-namespace secrets ─────────────────────────────────────
+# This cluster hosts both fleetops-dev and fleetops-prod K8s namespaces.
+# The prod namespace ExternalSecrets reference fleetops/prod/* paths.
+# These resources create those paths pointing to the same infrastructure.
 
+resource "random_password" "lambda_service_prod_ns" {
+  length           = 24
+  special          = true
+  override_special = "!#$%&*-_=+"
+}
+
+resource "aws_secretsmanager_secret" "db_prod_ns" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
+  name                    = "fleetops/prod/db"
+  description             = "FleetOps prod-namespace DB credentials (same RDS as dev)"
+  kms_key_id              = module.kms.secrets_key_arn
+  recovery_window_in_days = 0
+
+  tags = { Name = "fleetops-prod-ns-db-secret", ManagedBy = "terraform" }
+}
+
+resource "aws_secretsmanager_secret_version" "db_prod_ns" {
+  secret_id = aws_secretsmanager_secret.db_prod_ns.id
+  secret_string = jsonencode({
+    host     = module.rds.db_endpoint
+    port     = 5432
+    dbname   = "postgres"
+    username = var.db_username
+    password = var.db_password
+  })
+}
+
+resource "aws_secretsmanager_secret" "jwt_prod_ns" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
+  name                    = "fleetops/prod/jwt"
+  description             = "FleetOps prod-namespace JWT secret (same as dev)"
+  kms_key_id              = module.kms.secrets_key_arn
+  recovery_window_in_days = 0
+
+  tags = { Name = "fleetops-prod-ns-jwt-secret", ManagedBy = "terraform" }
+}
+
+resource "aws_secretsmanager_secret_version" "jwt_prod_ns" {
+  secret_id     = aws_secretsmanager_secret.jwt_prod_ns.id
+  secret_string = jsonencode({ jwt_secret = var.jwt_secret })
+}
+
+resource "aws_secretsmanager_secret" "lambda_service_prod_ns" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
+  name                    = "fleetops/prod/lambda-service-credentials"
+  description             = "Credentials for lambda-service account in prod namespace"
+  kms_key_id              = module.kms.secrets_key_arn
+  recovery_window_in_days = 0
+
+  tags = { Name = "fleetops-prod-ns-lambda-svc-secret", ManagedBy = "terraform" }
+}
+
+resource "aws_secretsmanager_secret_version" "lambda_service_prod_ns" {
+  secret_id = aws_secretsmanager_secret.lambda_service_prod_ns.id
+  secret_string = jsonencode({
+    username = "lambda-service"
+    password = random_password.lambda_service_prod_ns.result
+  })
+}
+
+resource "aws_ssm_parameter" "redis_endpoint_prod_ns" {
+  #checkov:skip=CKV2_AWS_34:Non-sensitive endpoint
+  name        = "/fleetops/prod/redis/endpoint"
+  description = "Redis endpoint for prod namespace (same cluster as dev)"
+  type        = "String"
+  value       = module.redis.redis_endpoint
+
+  tags = { Name = "fleetops-prod-ns-redis-endpoint", ManagedBy = "terraform" }
+}
+
+resource "aws_ssm_parameter" "insurance_sns_prod_ns" {
+  #checkov:skip=CKV2_AWS_34:SNS topic ARN is a resource identifier, not a secret
+  name        = "/fleetops/prod/sns/insurance-alerts-arn"
+  description = "Insurance SNS ARN for prod namespace"
+  type        = "String"
+  value       = module.sns.insurance_alerts_topic_arn
+
+  tags = { Name = "fleetops-prod-ns-insurance-sns", ManagedBy = "terraform" }
+}
+
+resource "aws_ssm_parameter" "service_sns_prod_ns" {
+  #checkov:skip=CKV2_AWS_34:SNS topic ARN is a resource identifier, not a secret
+  name        = "/fleetops/prod/sns/service-alerts-arn"
+  description = "Service SNS ARN for prod namespace"
+  type        = "String"
+  value       = module.sns.service_alerts_topic_arn
+
+  tags = { Name = "fleetops-prod-ns-service-sns", ManagedBy = "terraform" }
+}
 
