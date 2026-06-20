@@ -1,0 +1,10 @@
+{
+  "name": "fleetops-alert-processor",
+  "version": "1.0.0",
+  "description": "FleetOps EventBridge alert processor Lambda",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-sns": "^3.0.0",
+    "@aws-sdk/client-secrets-manager": "^3.0.0"
+  }
+}

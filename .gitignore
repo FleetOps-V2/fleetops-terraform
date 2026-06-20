@@ -1,0 +1,25 @@
+# Terraform state — never commit
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Sensitive variable files — never commit
+*.tfvars
+*.tfvars.local
+secrets.tfvars
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Lock files — commit these (they pin provider versions)
+# .terraform.lock.hcl
+
+# Terraform working directories
+.terraform/
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
