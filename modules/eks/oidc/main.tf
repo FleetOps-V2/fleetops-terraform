@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: eks/oidc  |  Phase: 2B
 # Creates the OIDC Identity Provider for IRSA
 # Must run AFTER eks/cluster — depends on the OIDC issuer URL

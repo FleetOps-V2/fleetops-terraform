@@ -1,8 +1,8 @@
 variable "environment" {
-  type      = string
+  type = string
 }
 variable "project" {
-  type = string
+  type    = string
   default = "fleetops"
 }
 variable "private_subnet_ids" {
@@ -15,11 +15,11 @@ variable "kms_rds_key_arn" {
   type = string
 }
 variable "db_instance_class" {
-  type = string
+  type    = string
   default = "db.t3.micro"
 }
 variable "db_username" {
-  type = string
+  type      = string
   sensitive = true
 }
 variable "db_password" {
@@ -27,7 +27,7 @@ variable "db_password" {
   sensitive = true
 }
 variable "enable_deletion_protection" {
-  type = bool
+  type    = bool
   default = false
 }
 

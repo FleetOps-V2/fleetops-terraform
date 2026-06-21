@@ -95,7 +95,7 @@ resource "aws_secretsmanager_secret" "github_pat" {
 }
 
 resource "aws_secretsmanager_secret_version" "github_pat" {
-  secret_id     = aws_secretsmanager_secret.github_pat.id
+  secret_id = aws_secretsmanager_secret.github_pat.id
   secret_string = jsonencode({
     username = var.github_username
     token    = var.github_pat

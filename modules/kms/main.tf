@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: kms  |  Phase: 2A
 # 4 Customer Managed Keys — one per concern
 # Separation ensures a compromised key doesn't expose everything

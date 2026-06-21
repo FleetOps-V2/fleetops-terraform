@@ -2,7 +2,7 @@ variable "environment" {
   type = string
 }
 variable "project" {
-  type = string
+  type    = string
   default = "fleetops"
 }
 variable "eks_cluster_version" {
@@ -10,7 +10,7 @@ variable "eks_cluster_version" {
   default = "1.31"
 }
 variable "eks_cluster_role_arn" {
-  type = string
+  type    = string
   default = ""
 }
 variable "public_subnet_ids" {

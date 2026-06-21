@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: rds  |  Phase: 2A
 # db.t3.micro PostgreSQL — Free Tier, Single-AZ, KMS-encrypted
 # =============================================================
@@ -24,7 +24,7 @@ resource "aws_db_instance" "postgres" {
   identifier     = "${local.name_prefix}-postgres"
   engine         = "postgres"
   engine_version = "15.7"
-  instance_class = var.db_instance_class   # db.t3.micro — Free Tier eligible
+  instance_class = var.db_instance_class # db.t3.micro — Free Tier eligible
 
   # Free Tier: 20 GB max. max_allocated_storage omitted to disable autoscaling —
   # autoscaling would silently expand beyond 20 GB and incur charges.
@@ -39,10 +39,10 @@ resource "aws_db_instance" "postgres" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.rds_sg_id]
 
-  multi_az            = false   # Single-AZ only — Free Tier does not include Multi-AZ
-  publicly_accessible = false
-  deletion_protection = var.enable_deletion_protection
-  skip_final_snapshot = !var.enable_deletion_protection
+  multi_az                  = false # Single-AZ only — Free Tier does not include Multi-AZ
+  publicly_accessible       = false
+  deletion_protection       = var.enable_deletion_protection
+  skip_final_snapshot       = !var.enable_deletion_protection
   final_snapshot_identifier = var.enable_deletion_protection ? "${local.name_prefix}-final-snapshot" : null
 
   backup_retention_period = 1

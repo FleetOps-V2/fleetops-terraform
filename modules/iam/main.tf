@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: iam  |  Phase: 2A
 # Provisions: EKS Node Role, App IRSA Role, Lambda Role
 # No static access keys — all roles assumed via instance profile
@@ -152,9 +152,9 @@ resource "aws_iam_role_policy" "app_secrets" {
         ]
       },
       {
-        Sid    = "BedrockInvoke"
-        Effect = "Allow"
-        Action = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
+        Sid      = "BedrockInvoke"
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
         Resource = "arn:aws:bedrock:${var.aws_region}::foundation-model/*"
       },
       {
@@ -167,15 +167,15 @@ resource "aws_iam_role_policy" "app_secrets" {
         ]
       },
       {
-        Sid    = "CloudWatchAuditLogs"
-        Effect = "Allow"
-        Action = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
+        Sid      = "CloudWatchAuditLogs"
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
         Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/fleetops/*:*"
       },
       {
-        Sid    = "DynamoDBAccess"
-        Effect = "Allow"
-        Action = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:Query", "dynamodb:Scan", "dynamodb:UpdateItem"]
+        Sid      = "DynamoDBAccess"
+        Effect   = "Allow"
+        Action   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:Query", "dynamodb:Scan", "dynamodb:UpdateItem"]
         Resource = var.dynamodb_telemetry_arn != "" ? var.dynamodb_telemetry_arn : "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.project}-*"
       }
     ]

@@ -1,15 +1,15 @@
 variable "project" {
-  type = string
+  type        = string
   description = "Project name"
 }
 
 variable "environment" {
-  type = string
+  type        = string
   description = "Environment name"
 }
 
 variable "kms_sns_key_arn" {
-  type = string
+  type        = string
   description = "KMS Key ARN for encrypting SNS topics"
 }
 

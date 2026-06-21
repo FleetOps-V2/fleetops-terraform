@@ -1,4 +1,4 @@
-﻿# Module: acm
+# Module: acm
 # Phase: 2B
 # Description: TLS certificate for fleetops.website via DNS validation
 # TODO: Implement in Phase 2B

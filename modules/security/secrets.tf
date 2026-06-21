@@ -13,12 +13,12 @@ resource "aws_secretsmanager_secret" "db_credentials" {
 }
 
 resource "aws_secretsmanager_secret_version" "db_credentials_placeholder" {
-  secret_id     = aws_secretsmanager_secret.db_credentials.id
+  secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = "postgres"
     password = "change_me_in_aws_console_or_cli"
   })
-  
+
   lifecycle {
     ignore_changes = [secret_string]
   }

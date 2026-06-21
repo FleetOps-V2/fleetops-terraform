@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: eks/cluster  |  Phase: 2B
 # Provisions the EKS Control Plane
 # =============================================================
@@ -6,9 +6,9 @@
 data "aws_caller_identity" "current" {}
 
 locals {
-  name_prefix = "${var.project}-${var.environment}"
+  name_prefix  = "${var.project}-${var.environment}"
   cluster_name = "${local.name_prefix}-eks"
-  common_tags  = {
+  common_tags = {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "terraform"
@@ -27,8 +27,8 @@ resource "aws_eks_cluster" "main" {
   vpc_config {
     subnet_ids              = concat(var.public_subnet_ids, var.private_subnet_ids)
     security_group_ids      = [var.control_plane_sg_id]
-    endpoint_public_access  = true   # kubectl access from outside
-    endpoint_private_access = true   # node-to-API internal access
+    endpoint_public_access  = true # kubectl access from outside
+    endpoint_private_access = true # node-to-API internal access
     public_access_cidrs     = var.public_access_cidrs
   }
 
@@ -82,10 +82,10 @@ resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
 }
 resource "aws_eks_access_entry" "admin_users" {
-  for_each     = toset(var.admin_iam_user_arns)
-  cluster_name = aws_eks_cluster.main.name
+  for_each      = toset(var.admin_iam_user_arns)
+  cluster_name  = aws_eks_cluster.main.name
   principal_arn = each.value
-  type         = "STANDARD"
+  type          = "STANDARD"
 }
 
 resource "aws_eks_access_policy_association" "admin_users_policy" {

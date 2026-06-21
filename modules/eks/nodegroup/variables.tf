@@ -2,7 +2,7 @@ variable "environment" {
   type = string
 }
 variable "project" {
-  type = string
+  type    = string
   default = "fleetops"
 }
 variable "cluster_name" {
@@ -15,19 +15,19 @@ variable "private_subnet_ids" {
   type = list(string)
 }
 variable "node_instance_type" {
-  type = string
+  type    = string
   default = "t3.small"
 }
 variable "min_size" {
-  type = number
+  type    = number
   default = 1
 }
 variable "max_size" {
-  type = number
+  type    = number
   default = 3
 }
 variable "desired_size" {
-  type = number
+  type    = number
   default = 2
 }
 

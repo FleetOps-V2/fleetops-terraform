@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: s3  |  Phase: 2A
 # Vehicle documents bucket — KMS-encrypted, versioned, private
 # Use cases: Insurance, RC Book, Permits, vehicle photo uploads

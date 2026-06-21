@@ -2,11 +2,11 @@ variable "environment" {
   type = string
 }
 variable "project" {
-  type = string
+  type    = string
   default = "fleetops"
 }
 variable "aws_region" {
-  type = string
+  type    = string
   default = "us-east-1"
 }
 
@@ -35,25 +35,25 @@ variable "kms_key_arns" {
 }
 
 variable "dynamodb_telemetry_arn" {
-  type = string
+  type        = string
   description = "ARN of the DynamoDB telemetry table"
   default     = ""
 }
 
 variable "sqs_gps_queue_arn" {
-  type = string
+  type        = string
   description = "ARN of the SQS GPS tracking queue"
   default     = ""
 }
 
 variable "sns_alerts_topic_arn" {
-  type = string
+  type        = string
   description = "ARN of the SNS alerts topic"
   default     = ""
 }
 
 variable "bedrock_policy_arn" {
-  type = string
+  type        = string
   description = "ARN of the Bedrock access policy"
   default     = ""
 }

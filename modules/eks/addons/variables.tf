@@ -2,11 +2,11 @@ variable "environment" {
   type = string
 }
 variable "project" {
-  type = string
+  type    = string
   default = "fleetops"
 }
 variable "aws_region" {
-  type = string
+  type    = string
   default = "us-east-1"
 }
 variable "cluster_name" {

@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: networking
 # Phase:  2A
 # Provisions: VPC, Subnets, IGW, Route Tables, Security Groups,
@@ -48,8 +48,8 @@ resource "aws_subnet" "public" {
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-public-subnet-${count.index + 1}"
     # Required for EKS ALB controller to create internet-facing ALBs
-    "kubernetes.io/role/elb"                              = "1"
-    "kubernetes.io/cluster/${local.name_prefix}-eks"      = "shared"
+    "kubernetes.io/role/elb"                         = "1"
+    "kubernetes.io/cluster/${local.name_prefix}-eks" = "shared"
   })
 }
 
@@ -63,8 +63,8 @@ resource "aws_subnet" "private" {
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-private-subnet-${count.index + 1}"
     # Required for EKS ALB controller to create internal ALBs
-    "kubernetes.io/role/internal-elb"                     = "1"
-    "kubernetes.io/cluster/${local.name_prefix}-eks"      = "shared"
+    "kubernetes.io/role/internal-elb"                = "1"
+    "kubernetes.io/cluster/${local.name_prefix}-eks" = "shared"
   })
 }
 
@@ -553,8 +553,8 @@ resource "aws_iam_role_policy" "vpc_flow_logs" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = [
+      Effect = "Allow"
+      Action = [
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
         "logs:PutLogEvents",

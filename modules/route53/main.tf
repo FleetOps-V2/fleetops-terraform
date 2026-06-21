@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: route53  |  Phase: 2A
 # Hosted Zone for fleetops.website
 # NS records must be manually added to GoDaddy after apply

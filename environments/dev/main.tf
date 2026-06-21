@@ -9,12 +9,12 @@ terraform {
 
   required_version = ">= 1.6.0"
   required_providers {
-    aws        = { source = "hashicorp/aws",        version = "= 5.100.0" }
-    helm       = { source = "hashicorp/helm",       version = "= 2.17.0" }
+    aws        = { source = "hashicorp/aws", version = "= 5.100.0" }
+    helm       = { source = "hashicorp/helm", version = "= 2.17.0" }
     kubernetes = { source = "hashicorp/kubernetes", version = "= 2.38.0" }
-    random     = { source = "hashicorp/random",     version = ">= 3.6.0" }
-    tls        = { source = "hashicorp/tls",        version = "= 4.3.0" }
-    archive    = { source = "hashicorp/archive",    version = "= 2.8.0" }
+    random     = { source = "hashicorp/random", version = ">= 3.6.0" }
+    tls        = { source = "hashicorp/tls", version = "= 4.3.0" }
+    archive    = { source = "hashicorp/archive", version = "= 2.8.0" }
   }
 }
 
@@ -169,36 +169,36 @@ module "route53" {
 # ── Phase 2B Module Calls ─────────────────────────────────────
 
 module "eks_cluster" {
-  source               = "../../modules/eks/cluster"
-  project              = "fleetops"
-  environment          = var.environment
-  eks_cluster_version  = var.eks_cluster_version
-  public_subnet_ids    = module.networking.public_subnet_ids
-  private_subnet_ids   = module.networking.private_subnet_ids
-  control_plane_sg_id  = module.networking.eks_control_plane_sg_id
-  admin_iam_user_arns  = []
-  public_access_cidrs  = var.eks_public_access_cidrs
-  kms_secrets_key_arn  = module.kms.secrets_key_arn
+  source              = "../../modules/eks/cluster"
+  project             = "fleetops"
+  environment         = var.environment
+  eks_cluster_version = var.eks_cluster_version
+  public_subnet_ids   = module.networking.public_subnet_ids
+  private_subnet_ids  = module.networking.private_subnet_ids
+  control_plane_sg_id = module.networking.eks_control_plane_sg_id
+  admin_iam_user_arns = []
+  public_access_cidrs = var.eks_public_access_cidrs
+  kms_secrets_key_arn = module.kms.secrets_key_arn
 }
 
 module "eks_oidc" {
-  source           = "../../modules/eks/oidc"
-  project          = "fleetops"
-  environment      = var.environment
-  oidc_issuer_url  = module.eks_cluster.oidc_issuer_url
+  source          = "../../modules/eks/oidc"
+  project         = "fleetops"
+  environment     = var.environment
+  oidc_issuer_url = module.eks_cluster.oidc_issuer_url
 }
 
 module "eks_nodegroup" {
-  source              = "../../modules/eks/nodegroup"
-  project             = "fleetops"
-  environment         = var.environment
-  cluster_name        = module.eks_cluster.cluster_name
-  node_role_arn       = module.iam.eks_node_role_arn
-  private_subnet_ids  = module.networking.private_subnet_ids
-  node_instance_type  = var.eks_node_instance_type
-  min_size            = var.eks_node_min_size
-  max_size            = var.eks_node_max_size
-  desired_size        = var.eks_node_desired_size
+  source             = "../../modules/eks/nodegroup"
+  project            = "fleetops"
+  environment        = var.environment
+  cluster_name       = module.eks_cluster.cluster_name
+  node_role_arn      = module.iam.eks_node_role_arn
+  private_subnet_ids = module.networking.private_subnet_ids
+  node_instance_type = var.eks_node_instance_type
+  min_size           = var.eks_node_min_size
+  max_size           = var.eks_node_max_size
+  desired_size       = var.eks_node_desired_size
 }
 
 # EKS managed nodes get the auto-created cluster SG, not the node group SG.
@@ -248,7 +248,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_pods_80" {
 # Set var.origin_alb_dns after first K8s deploy, then re-apply to create this record.
 resource "aws_route53_record" "origin_alb_alias" {
   #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
-  count   = var.origin_alb_dns != "" ? 1 : 0
+  count = var.origin_alb_dns != "" ? 1 : 0
 
   zone_id = module.route53.zone_id
   name    = "origin.${var.domain_name}"
@@ -256,7 +256,7 @@ resource "aws_route53_record" "origin_alb_alias" {
 
   alias {
     name                   = var.origin_alb_dns
-    zone_id                = "Z35SXDOTRQ7X7K"  # us-east-1 ALB hosted zone — fixed by AWS
+    zone_id                = "Z35SXDOTRQ7X7K" # us-east-1 ALB hosted zone — fixed by AWS
     evaluate_target_health = true
   }
 }
@@ -266,7 +266,7 @@ resource "aws_route53_record" "origin_alb_alias" {
 # Set origin_alb_dns after the first K8s deploy, then re-apply.
 resource "aws_route53_record" "argocd" {
   #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
-  count   = var.origin_alb_dns != "" ? 1 : 0
+  count = var.origin_alb_dns != "" ? 1 : 0
 
   zone_id = module.route53.zone_id
   name    = "argocd.${var.domain_name}"
@@ -280,18 +280,18 @@ resource "aws_route53_record" "argocd" {
 }
 
 module "eks_addons" {
-  source               = "../../modules/eks/addons"
-  project              = "fleetops"
-  environment          = var.environment
-  aws_region           = var.aws_region
-  cluster_name         = module.eks_cluster.cluster_name
-  vpc_id               = module.networking.vpc_id
-  oidc_provider_url    = module.eks_oidc.oidc_provider_url
-  argocd_repo_url      = var.argocd_repo_url
-  kms_secrets_key_arn  = module.kms.secrets_key_arn
-  acm_certificate_arn  = module.acm.certificate_arn
-  alb_sg_id            = module.networking.alb_sg_id
-  domain_name          = var.domain_name
+  source              = "../../modules/eks/addons"
+  project             = "fleetops"
+  environment         = var.environment
+  aws_region          = var.aws_region
+  cluster_name        = module.eks_cluster.cluster_name
+  vpc_id              = module.networking.vpc_id
+  oidc_provider_url   = module.eks_oidc.oidc_provider_url
+  argocd_repo_url     = var.argocd_repo_url
+  kms_secrets_key_arn = module.kms.secrets_key_arn
+  acm_certificate_arn = module.acm.certificate_arn
+  alb_sg_id           = module.networking.alb_sg_id
+  domain_name         = var.domain_name
 
   # Helm charts need schedulable nodes — wait for node group to be ready.
   # secrets_manager dependency ensures GitHub PAT secret exists before eks_addons tries to read it.
@@ -308,15 +308,15 @@ module "sns" {
 }
 
 module "lambda" {
-  source                             = "../../modules/lambda"
-  project                            = "fleetops"
-  environment                        = var.environment
-  lambda_role_arn                    = module.iam.lambda_role_arn
-  vehicle_service_url                = var.vehicle_service_url
-  auth_service_url                   = var.auth_service_url
+  source                                = "../../modules/lambda"
+  project                               = "fleetops"
+  environment                           = var.environment
+  lambda_role_arn                       = module.iam.lambda_role_arn
+  vehicle_service_url                   = var.vehicle_service_url
+  auth_service_url                      = var.auth_service_url
   lambda_service_credentials_secret_arn = module.secrets_manager.lambda_service_credentials_arn
-  insurance_sns_arn                  = module.sns.insurance_alerts_topic_arn
-  service_sns_arn                    = module.sns.service_alerts_topic_arn
+  insurance_sns_arn                     = module.sns.insurance_alerts_topic_arn
+  service_sns_arn                       = module.sns.service_alerts_topic_arn
 }
 
 module "eventbridge" {

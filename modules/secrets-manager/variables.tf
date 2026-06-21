@@ -1,42 +1,42 @@
 variable "environment" {
-  type      = string
+  type = string
 }
 variable "project" {
-  type = string
+  type    = string
   default = "fleetops"
 }
 variable "kms_secrets_key_arn" {
-  type = string
+  type        = string
   description = "ARN of the KMS key for Secrets Manager"
 }
 variable "db_host" {
-  type = string
+  type        = string
   description = "RDS endpoint address"
 }
 variable "db_username" {
   type        = string
   description = "RDS master username"
-  sensitive = true
+  sensitive   = true
 }
 variable "db_password" {
-  type      = string
+  type        = string
   description = "RDS master password"
-  sensitive = true
+  sensitive   = true
 }
 variable "jwt_secret" {
-  type      = string
+  type        = string
   description = "JWT signing secret (32+ chars)"
-  sensitive = true
+  sensitive   = true
 }
 variable "github_username" {
-  type      = string
+  type        = string
   description = "GitHub username for ArgoCD repo access"
-  default   = "johannabyvannilamad"
+  default     = "johannabyvannilamad"
 }
 variable "github_pat" {
-  type      = string
+  type        = string
   description = "GitHub PAT for ArgoCD to pull fleetops-deployments"
-  sensitive = true
+  sensitive   = true
 }
 
 

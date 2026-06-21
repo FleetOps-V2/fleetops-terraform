@@ -10,8 +10,8 @@
 
 # GitHub's OIDC provider — one per AWS account, shared across repos
 resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
 
   # Both thumbprints included to survive GitHub root CA rotation (added second in May 2023)
   thumbprint_list = [
@@ -96,9 +96,9 @@ resource "aws_iam_role_policy" "github_actions_ecr_push" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "ECRAuth"
-        Effect = "Allow"
-        Action = ["ecr:GetAuthorizationToken"]
+        Sid      = "ECRAuth"
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
         Resource = "*"
       },
       {

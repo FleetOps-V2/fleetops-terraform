@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: efs  |  Phase: 2A
 # Shared elastic file system for inspection/damage photos
 # and proof-of-delivery files — mounted into EKS pods via CSI
@@ -18,12 +18,12 @@ locals {
 resource "aws_efs_file_system" "main" {
   creation_token   = "${local.name_prefix}-efs"
   encrypted        = true
-  kms_key_id       = var.kms_s3_key_arn   # Reuse the S3/documents CMK
+  kms_key_id       = var.kms_s3_key_arn # Reuse the S3/documents CMK
   performance_mode = "generalPurpose"
   throughput_mode  = "bursting"
 
   lifecycle_policy {
-    transition_to_ia = "AFTER_30_DAYS"   # Move cold files to Infrequent Access
+    transition_to_ia = "AFTER_30_DAYS" # Move cold files to Infrequent Access
   }
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-efs" })
@@ -41,15 +41,15 @@ resource "aws_efs_mount_target" "main" {
 resource "aws_efs_access_point" "fleetops" {
   file_system_id = aws_efs_file_system.main.id
 
-  posix_user    {
+  posix_user {
     uid = 1000
     gid = 1000
   }
   root_directory {
     path = "/fleetops"
     creation_info {
-      owner_uid = 1000
-      owner_gid = 1000
+      owner_uid   = 1000
+      owner_gid   = 1000
       permissions = "755"
     }
   }

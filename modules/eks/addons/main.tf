@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: eks/addons  |  Phase: 2B
 # Installs Helm-based add-ons into the EKS cluster:
 #   1. AWS Load Balancer Controller   — creates ALBs from Ingress
@@ -13,11 +13,11 @@
 locals {
   name_prefix  = "${var.project}-${var.environment}"
   cluster_name = "${local.name_prefix}-eks"
-  common_tags  = {
-    Project = var.project
+  common_tags = {
+    Project     = var.project
     Environment = var.environment
-    ManagedBy = "terraform"
-    Module = "eks/addons"
+    ManagedBy   = "terraform"
+    Module      = "eks/addons"
     Owner       = "FleetOps-Team"
   }
 }
@@ -257,27 +257,27 @@ resource "helm_release" "aws_load_balancer_controller" {
   version    = "1.8.1"
 
   set {
-    name = "clusterName"
+    name  = "clusterName"
     value = var.cluster_name
   }
   set {
-    name = "serviceAccount.create"
+    name  = "serviceAccount.create"
     value = "true"
   }
   set {
-    name = "serviceAccount.name"
+    name  = "serviceAccount.name"
     value = "aws-load-balancer-controller"
   }
   set {
-    name = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = aws_iam_role.alb_controller.arn
   }
   set {
-    name = "region"
+    name  = "region"
     value = var.aws_region
   }
   set {
-    name = "vpcId"
+    name  = "vpcId"
     value = var.vpc_id
   }
   set {
@@ -297,7 +297,7 @@ resource "helm_release" "external_secrets" {
   create_namespace = true
 
   set {
-    name = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = aws_iam_role.external_secrets.arn
   }
   set {
@@ -339,27 +339,27 @@ resource "helm_release" "cluster_autoscaler" {
   version    = "9.37.0"
 
   set {
-    name = "autoDiscovery.clusterName"
+    name  = "autoDiscovery.clusterName"
     value = var.cluster_name
   }
   set {
-    name = "awsRegion"
+    name  = "awsRegion"
     value = var.aws_region
   }
   set {
-    name = "rbac.serviceAccount.name"
+    name  = "rbac.serviceAccount.name"
     value = "cluster-autoscaler"
   }
   set {
-    name = "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    name  = "rbac.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = aws_iam_role.cluster_autoscaler.arn
   }
   set {
-    name = "extraArgs.balance-similar-node-groups"
+    name  = "extraArgs.balance-similar-node-groups"
     value = "true"
   }
   set {
-    name = "extraArgs.skip-nodes-with-system-pods"
+    name  = "extraArgs.skip-nodes-with-system-pods"
     value = "false"
   }
   set {
@@ -406,7 +406,7 @@ resource "helm_release" "argocd" {
         }
       }
       server = {
-        extraArgs = ["--insecure"]  # TLS terminates at ALB; server runs plain HTTP internally
+        extraArgs = ["--insecure"] # TLS terminates at ALB; server runs plain HTTP internally
         additionalApplications = [
           {
             name      = "fleetops-root-prod"

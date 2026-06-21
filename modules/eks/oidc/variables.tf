@@ -2,11 +2,11 @@ variable "environment" {
   type = string
 }
 variable "project" {
-  type = string
+  type    = string
   default = "fleetops"
 }
 variable "oidc_issuer_url" {
-  type = string
+  type        = string
   description = "OIDC issuer URL from eks/cluster output"
 }
 

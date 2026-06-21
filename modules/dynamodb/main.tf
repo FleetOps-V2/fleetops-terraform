@@ -1,4 +1,4 @@
-﻿locals {
+locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
     Project     = var.project
@@ -10,10 +10,10 @@
 }
 
 resource "aws_dynamodb_table" "telemetry" {
-  name           = "${local.name_prefix}-vehicle-telemetry"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "vehicle_id"
-  range_key      = "timestamp"
+  name         = "${local.name_prefix}-vehicle-telemetry"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "vehicle_id"
+  range_key    = "timestamp"
 
   attribute {
     name = "vehicle_id"

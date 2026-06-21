@@ -35,12 +35,12 @@ resource "aws_lambda_function" "alert_processor" {
 
   environment {
     variables = {
-      ENVIRONMENT                            = var.environment
-      VEHICLE_SERVICE_URL                    = var.vehicle_service_url
-      AUTH_SERVICE_URL                       = var.auth_service_url
-      LAMBDA_SERVICE_CREDENTIALS_SECRET_ARN  = var.lambda_service_credentials_secret_arn
-      INSURANCE_SNS_ARN                      = var.insurance_sns_arn
-      SERVICE_SNS_ARN                        = var.service_sns_arn
+      ENVIRONMENT                           = var.environment
+      VEHICLE_SERVICE_URL                   = var.vehicle_service_url
+      AUTH_SERVICE_URL                      = var.auth_service_url
+      LAMBDA_SERVICE_CREDENTIALS_SECRET_ARN = var.lambda_service_credentials_secret_arn
+      INSURANCE_SNS_ARN                     = var.insurance_sns_arn
+      SERVICE_SNS_ARN                       = var.service_sns_arn
     }
   }
 

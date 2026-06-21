@@ -9,12 +9,12 @@ terraform {
 
   required_version = ">= 1.6.0"
   required_providers {
-    aws        = { source = "hashicorp/aws",        version = "= 5.100.0" }
-    helm       = { source = "hashicorp/helm",       version = "= 2.17.0" }
+    aws        = { source = "hashicorp/aws", version = "= 5.100.0" }
+    helm       = { source = "hashicorp/helm", version = "= 2.17.0" }
     kubernetes = { source = "hashicorp/kubernetes", version = "= 2.38.0" }
-    random     = { source = "hashicorp/random",     version = ">= 3.6.0" }
-    tls        = { source = "hashicorp/tls",        version = "= 4.3.0" }
-    archive    = { source = "hashicorp/archive",    version = "= 2.8.0" }
+    random     = { source = "hashicorp/random", version = ">= 3.6.0" }
+    tls        = { source = "hashicorp/tls", version = "= 4.3.0" }
+    archive    = { source = "hashicorp/archive", version = "= 2.8.0" }
   }
 }
 
@@ -165,16 +165,16 @@ module "route53" {
 # ── EKS ──────────────────────────────────────────────────────
 
 module "eks_cluster" {
-  source               = "../../modules/eks/cluster"
-  project              = "fleetops"
-  environment          = var.environment
-  eks_cluster_version  = var.eks_cluster_version
-  public_subnet_ids    = module.networking.public_subnet_ids
-  private_subnet_ids   = module.networking.private_subnet_ids
-  control_plane_sg_id  = module.networking.eks_control_plane_sg_id
-  admin_iam_user_arns  = var.admin_iam_user_arns
-  public_access_cidrs  = var.eks_public_access_cidrs
-  kms_secrets_key_arn  = module.kms.secrets_key_arn
+  source              = "../../modules/eks/cluster"
+  project             = "fleetops"
+  environment         = var.environment
+  eks_cluster_version = var.eks_cluster_version
+  public_subnet_ids   = module.networking.public_subnet_ids
+  private_subnet_ids  = module.networking.private_subnet_ids
+  control_plane_sg_id = module.networking.eks_control_plane_sg_id
+  admin_iam_user_arns = var.admin_iam_user_arns
+  public_access_cidrs = var.eks_public_access_cidrs
+  kms_secrets_key_arn = module.kms.secrets_key_arn
 }
 
 module "eks_oidc" {
@@ -259,7 +259,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_pods_80" {
 
 resource "aws_route53_record" "origin_alb_alias" {
   #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
-  count   = var.origin_alb_dns != "" ? 1 : 0
+  count = var.origin_alb_dns != "" ? 1 : 0
 
   zone_id = module.route53.zone_id
   name    = "origin.${var.domain_name}"
@@ -274,7 +274,7 @@ resource "aws_route53_record" "origin_alb_alias" {
 
 resource "aws_route53_record" "argocd" {
   #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
-  count   = var.origin_alb_dns != "" ? 1 : 0
+  count = var.origin_alb_dns != "" ? 1 : 0
 
   zone_id = module.route53.zone_id
   name    = "argocd.${var.domain_name}"
