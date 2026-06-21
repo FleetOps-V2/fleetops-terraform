@@ -7,6 +7,8 @@
 *.tfvars
 *.tfvars.local
 secrets.tfvars
+# Non-sensitive environment config is safe to commit (secrets use TF_VAR_* env vars in CI/CD)
+!*.auto.tfvars
 
 # Crash logs
 crash.log
