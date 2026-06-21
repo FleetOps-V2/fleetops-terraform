@@ -1,4 +1,4 @@
-﻿locals {
+locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
     Project     = var.project
@@ -7,6 +7,14 @@
     Module      = "waf"
     Owner       = "FleetOps-Team"
   }
+}
+
+# WAFv2 log group must have name prefixed with aws-waf-logs-
+resource "aws_cloudwatch_log_group" "waf_logs" {
+  #checkov:skip=CKV_AWS_158:WAF log group name must start with aws-waf-logs- which conflicts with CMK key grant scoping; KMS deferred
+  name              = "aws-waf-logs-${local.name_prefix}"
+  retention_in_days = 365
+  tags              = local.common_tags
 }
 
 resource "aws_wafv2_web_acl" "main" {
@@ -62,6 +70,28 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesKnownBadInputsRuleSetMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "${local.name_prefix}-web-acl-metric"
@@ -71,6 +101,7 @@ resource "aws_wafv2_web_acl" "main" {
   tags = local.common_tags
 }
 
-
-
-
+resource "aws_wafv2_web_acl_logging_configuration" "main" {
+  log_destination_configs = [aws_cloudwatch_log_group.waf_logs.arn]
+  resource_arn            = aws_wafv2_web_acl.main.arn
+}

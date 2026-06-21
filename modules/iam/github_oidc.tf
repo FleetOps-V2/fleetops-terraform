@@ -54,6 +54,7 @@ resource "aws_iam_role" "github_actions" {
 # Production recommendation: replace with a PermissionsBoundary or
 # service-specific policies scoped to the resources Terraform manages.
 resource "aws_iam_role_policy_attachment" "github_actions_admin" {
+  #checkov:skip=CKV_AWS_274:AdministratorAccess required for Terraform CI/CD in training environment; production should use scoped policies with PermissionsBoundary
   role       = aws_iam_role.github_actions.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

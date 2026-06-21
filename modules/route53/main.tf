@@ -7,11 +7,13 @@
 
 locals {
   name_prefix = "${var.project}-${var.environment}"
-  common_tags = { Project = var.project
+  common_tags = {
+    Project     = var.project
     Environment = var.environment
-    ManagedBy = "terraform"
-    Module = "route53" }
-    Owner       = "FleetOps-Team" }
+    ManagedBy   = "terraform"
+    Module      = "route53"
+    Owner       = "FleetOps-Team"
+  }
 }
 
 # Hosted Zone — delegates DNS to AWS Route53 name servers

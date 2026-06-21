@@ -5,11 +5,13 @@
 
 locals {
   name_prefix = "${var.project}-${var.environment}"
-  common_tags = { Project = var.project
+  common_tags = {
+    Project     = var.project
     Environment = var.environment
-    ManagedBy = "terraform"
-    Module = "rds" }
-    Owner       = "FleetOps-Team" }
+    ManagedBy   = "terraform"
+    Module      = "rds"
+    Owner       = "FleetOps-Team"
+  }
 }
 
 resource "aws_db_subnet_group" "main" {

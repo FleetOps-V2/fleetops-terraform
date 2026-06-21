@@ -1,23 +1,24 @@
 variable "project" {
-  type = string
+  type        = string
   description = "Project name"
 }
 
 variable "environment" {
-  type = string
+  type        = string
   description = "Environment name"
 }
 
 variable "service_alerts_topic_arn" {
-  type = string
+  type        = string
   description = "ARN of the SNS topic for service alerts"
 }
 
 variable "rds_instance_identifier" {
-  type = string
+  type        = string
   description = "Identifier of the RDS instance to monitor"
 }
 
-
-
-
+variable "kms_key_arn" {
+  type        = string
+  description = "ARN of KMS key for CloudWatch log group encryption"
+}

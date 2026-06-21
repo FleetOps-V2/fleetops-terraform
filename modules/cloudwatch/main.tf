@@ -1,4 +1,4 @@
-﻿locals {
+locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
     Project     = var.project
@@ -52,7 +52,8 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 resource "aws_cloudwatch_log_group" "audit_trail" {
   name              = "/fleetops/audit-trail"
-  retention_in_days = 90
+  retention_in_days = 365
+  kms_key_id        = var.kms_key_arn
   tags              = local.common_tags
 }
 
@@ -74,7 +75,3 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
 
   tags = local.common_tags
 }
-
-
-
-

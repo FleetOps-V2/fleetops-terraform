@@ -10,11 +10,65 @@ locals {
 }
 
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 resource "aws_s3_bucket" "config_logs" {
+  #checkov:skip=CKV2_AWS_62:Event notifications not required for AWS Config log storage
+  #checkov:skip=CKV_AWS_144:Cross-region replication not required for AWS Config logs
+  #checkov:skip=CKV_AWS_18:Access logging on this bucket would create a recursive dependency
+  #checkov:skip=CKV_AWS_145:AWS Config log delivery requires SSE-S3; KMS CMK not supported for Config S3 delivery
   bucket        = "${local.name_prefix}-config-logs-${data.aws_caller_identity.current.account_id}"
   force_destroy = true
   tags          = local.common_tags
+}
+
+resource "aws_s3_bucket_public_access_block" "config_logs" {
+  bucket                  = aws_s3_bucket.config_logs.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "config_logs" {
+  bucket = aws_s3_bucket.config_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "config_logs" {
+  #checkov:skip=CKV_AWS_145:Using SSE-S3 because AWS Config service requires standard encryption; CMK not supported for Config delivery
+  bucket = aws_s3_bucket.config_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "config_logs" {
+  bucket = aws_s3_bucket.config_logs.id
+
+  rule {
+    id     = "expire-old-config-logs"
+    status = "Enabled"
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+
+    expiration {
+      days = 365
+    }
+  }
 }
 
 resource "aws_s3_bucket_policy" "config_logs" {
@@ -47,6 +101,8 @@ resource "aws_s3_bucket_policy" "config_logs" {
       }
     ]
   })
+
+  depends_on = [aws_s3_bucket_public_access_block.config_logs]
 }
 
 resource "aws_iam_role" "config" {
@@ -120,7 +176,3 @@ resource "aws_config_config_rule" "root_account_mfa_enabled" {
   }
   depends_on = [aws_config_configuration_recorder.main]
 }
-
-
-
-

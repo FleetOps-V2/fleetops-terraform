@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: ssm  |  Phase: 2A
 # Non-sensitive configuration parameters (endpoints, config values)
 # Sensitive values go to Secrets Manager — SSM holds public config
@@ -7,15 +7,16 @@
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
-    Project = var.project
+    Project     = var.project
     Environment = var.environment
-    ManagedBy = "terraform"
-    Module = "ssm"
+    ManagedBy   = "terraform"
+    Module      = "ssm"
     Owner       = "FleetOps-Team"
   }
 }
 
 resource "aws_ssm_parameter" "redis_endpoint" {
+  #checkov:skip=CKV2_AWS_34:Non-sensitive endpoint; sensitive credentials are in Secrets Manager
   name        = "/${var.project}/${var.environment}/redis/endpoint"
   description = "ElastiCache Redis primary endpoint"
   type        = "String"
@@ -24,6 +25,7 @@ resource "aws_ssm_parameter" "redis_endpoint" {
 }
 
 resource "aws_ssm_parameter" "cors_allowed_origins" {
+  #checkov:skip=CKV2_AWS_34:Non-sensitive CORS origin list; not a secret
   name        = "/${var.project}/${var.environment}/app/cors-origins"
   description = "CORS allowed origins for the API gateway"
   type        = "String"
@@ -32,6 +34,7 @@ resource "aws_ssm_parameter" "cors_allowed_origins" {
 }
 
 resource "aws_ssm_parameter" "spring_profile" {
+  #checkov:skip=CKV2_AWS_34:Non-sensitive Spring profile name; not a secret
   name        = "/${var.project}/${var.environment}/app/spring-profile"
   description = "Active Spring Boot profile"
   type        = "String"
@@ -40,6 +43,7 @@ resource "aws_ssm_parameter" "spring_profile" {
 }
 
 resource "aws_ssm_parameter" "app_base_url" {
+  #checkov:skip=CKV2_AWS_34:Non-sensitive public URL; not a secret
   name        = "/${var.project}/${var.environment}/app/base-url"
   description = "Public base URL of the FleetOps application"
   type        = "String"
@@ -48,7 +52,7 @@ resource "aws_ssm_parameter" "app_base_url" {
 }
 
 resource "aws_ssm_parameter" "insurance_sns_topic_arn" {
-  count       = var.insurance_sns_topic_arn != "" ? 1 : 0
+  #checkov:skip=CKV2_AWS_34:SNS topic ARN is a resource identifier, not a secret
   name        = "/${var.project}/${var.environment}/sns/insurance-alerts-arn"
   description = "SNS topic ARN for insurance expiry alarms"
   type        = "String"
@@ -57,14 +61,10 @@ resource "aws_ssm_parameter" "insurance_sns_topic_arn" {
 }
 
 resource "aws_ssm_parameter" "service_sns_topic_arn" {
-  count       = var.service_sns_topic_arn != "" ? 1 : 0
+  #checkov:skip=CKV2_AWS_34:SNS topic ARN is a resource identifier, not a secret
   name        = "/${var.project}/${var.environment}/sns/service-alerts-arn"
   description = "SNS topic ARN for service overdue alarms"
   type        = "String"
   value       = var.service_sns_topic_arn
   tags        = local.common_tags
 }
-
-
-
-

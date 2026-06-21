@@ -1,8 +1,24 @@
+data "aws_caller_identity" "kms_current" {}
+
+locals {
+  kms_key_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "EnableIAMUserPermissions"
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.kms_current.account_id}:root" }
+      Action    = "kms:*"
+      Resource  = "*"
+    }]
+  })
+}
+
 # KMS Key for Application S3 Documents
 resource "aws_kms_key" "s3_documents_key" {
   description             = "KMS key for encrypting app documents in S3"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+  policy                  = local.kms_key_policy
 
   tags = {
     Name        = "fleetops-s3-documents-key-${var.environment}"
@@ -20,6 +36,7 @@ resource "aws_kms_key" "database_key" {
   description             = "KMS key for encrypting RDS PostgreSQL database"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+  policy                  = local.kms_key_policy
 
   tags = {
     Name        = "fleetops-database-key-${var.environment}"
@@ -37,6 +54,7 @@ resource "aws_kms_key" "secrets_key" {
   description             = "KMS key for encrypting Secrets Manager and SSM parameters"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+  policy                  = local.kms_key_policy
 
   tags = {
     Name        = "fleetops-secrets-key-${var.environment}"
@@ -54,6 +72,7 @@ resource "aws_kms_key" "state_key" {
   description             = "KMS key for encrypting Terraform state files in S3"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+  policy                  = local.kms_key_policy
 
   tags = {
     Name        = "fleetops-terraform-state-key-${var.environment}"
@@ -65,7 +84,3 @@ resource "aws_kms_alias" "state_alias" {
   name          = "alias/fleetops-terraform-state-key-${var.environment}"
   target_key_id = aws_kms_key.state_key.key_id
 }
-
-
-
-

@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # Module: secrets-manager  |  Phase: 2A
 # Provisions credential templates for DB + JWT
 # Actual values are injected via Terraform variables (from tfvars
@@ -18,6 +18,7 @@ locals {
 
 # ── Database Master Credentials ───────────────────────────────
 resource "aws_secretsmanager_secret" "db" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
   name                    = "${var.project}/${var.environment}/db"
   description             = "FleetOps RDS PostgreSQL master credentials"
   kms_key_id              = var.kms_secrets_key_arn
@@ -39,6 +40,7 @@ resource "aws_secretsmanager_secret_version" "db" {
 
 # ── JWT Signing Secret ────────────────────────────────────────
 resource "aws_secretsmanager_secret" "jwt" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
   name                    = "${var.project}/${var.environment}/jwt"
   description             = "FleetOps JWT signing secret (min 32 chars)"
   kms_key_id              = var.kms_secrets_key_arn
@@ -62,6 +64,7 @@ resource "random_password" "lambda_service" {
 }
 
 resource "aws_secretsmanager_secret" "lambda_service_credentials" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
   name                    = "${var.project}/${var.environment}/lambda-service-credentials"
   description             = "Credentials for the internal lambda-service account (MANAGER role)"
   kms_key_id              = var.kms_secrets_key_arn
@@ -82,8 +85,10 @@ resource "aws_secretsmanager_secret_version" "lambda_service_credentials" {
 # ArgoCD uses this to pull from the private fleetops-deployments repo.
 # recovery_window_in_days = 0 for dev so destroy + apply works immediately.
 resource "aws_secretsmanager_secret" "github_pat" {
+  #checkov:skip=CKV2_AWS_57:GitHub PAT rotation is manual (GitHub UI); not suitable for automated rotation Lambda
   name                    = "${var.project}/${var.environment}/github-pat"
   description             = "GitHub PAT for ArgoCD to pull fleetops-deployments"
+  kms_key_id              = var.kms_secrets_key_arn
   recovery_window_in_days = var.environment == "prod" ? 30 : 0
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-github-pat" })
@@ -96,7 +101,3 @@ resource "aws_secretsmanager_secret_version" "github_pat" {
     token    = var.github_pat
   })
 }
-
-
-
-

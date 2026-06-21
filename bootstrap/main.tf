@@ -12,11 +12,24 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_caller_identity" "bootstrap" {}
+
 # KMS Key for encrypting Terraform State
 resource "aws_kms_key" "state_key" {
   description             = "KMS key for encrypting Terraform state in S3"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "EnableIAMUserPermissions"
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.bootstrap.account_id}:root" }
+      Action    = "kms:*"
+      Resource  = "*"
+    }]
+  })
 
   tags = {
     Name        = "fleetops-terraform-state-key"
@@ -31,6 +44,10 @@ resource "aws_kms_alias" "state_key_alias" {
 
 # S3 Bucket for Terraform State
 resource "aws_s3_bucket" "state_bucket" {
+  #checkov:skip=CKV2_AWS_62:Event notifications not required for Terraform state bucket
+  #checkov:skip=CKV_AWS_18:Access logging creates a circular dependency for the state bucket
+  #checkov:skip=CKV_AWS_144:Cross-region replication not required for the bootstrap state bucket
+  #checkov:skip=CKV2_AWS_61:Lifecycle policies not required for Terraform state; versioning already enabled
   bucket        = var.state_bucket_name
   force_destroy = false # Prevent accidental deletion
 
@@ -119,6 +136,11 @@ resource "aws_dynamodb_table" "lock_table" {
     enabled = true
   }
 
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.state_key.arn
+  }
+
   tags = {
     Name        = "fleetops-terraform-locks"
     Environment = "bootstrap"
@@ -149,25 +171,31 @@ locals {
 }
 
 resource "aws_ecr_repository" "services" {
+  #checkov:skip=CKV_AWS_136:Changing encryption_type forces ECR repo recreation (all images deleted); KMS upgrade deferred to avoid deployment disruption
   for_each             = toset(local.ecr_services)
   name                 = "fleetops-dev/${each.key}"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 
   image_scanning_configuration { scan_on_push = true }
-  encryption_configuration    { encryption_type = "AES256" }
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
 
   tags = merge(local.ecr_tags, { Name = "fleetops-dev-${each.key}" })
 }
 
 resource "aws_ecr_repository" "operators" {
+  #checkov:skip=CKV_AWS_136:Changing encryption_type forces ECR repo recreation (all images deleted); KMS upgrade deferred to avoid deployment disruption
   for_each             = toset(local.ecr_operators)
   name                 = each.key
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
   force_delete         = true
 
   image_scanning_configuration { scan_on_push = true }
-  encryption_configuration    { encryption_type = "AES256" }
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
 
   tags = merge(local.ecr_tags, { Name = each.key, Purpose = "operator-mirror" })
 }

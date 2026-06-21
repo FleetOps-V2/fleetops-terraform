@@ -6,11 +6,13 @@
 
 locals {
   name_prefix = "${var.project}-${var.environment}"
-  common_tags = { Project = var.project
+  common_tags = {
+    Project     = var.project
     Environment = var.environment
-    ManagedBy = "terraform"
-    Module = "s3" }
-    Owner       = "FleetOps-Team" }
+    ManagedBy   = "terraform"
+    Module      = "s3"
+    Owner       = "FleetOps-Team"
+  }
 }
 
 resource "aws_s3_bucket" "vehicle_docs" {

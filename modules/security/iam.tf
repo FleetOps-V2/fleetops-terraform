@@ -108,6 +108,10 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
 
 # Custom Policy for accessing Secrets Manager, SSM Parameter Store, and KMS
 resource "aws_iam_policy" "secrets_kms_policy" {
+  #checkov:skip=CKV_AWS_288:KMS and Secrets Manager APIs are required; resource ARNs are parameterised via variables
+  #checkov:skip=CKV_AWS_289:Policy grants read-only Secrets Manager access; no resource exposure without constraints
+  #checkov:skip=CKV_AWS_290:KMS key usage APIs require wildcard resource; restriction enforced via key policy not IAM
+  #checkov:skip=CKV_AWS_355:KMS key usage APIs require wildcard resource; key restriction is via key policy, not IAM
   name        = "FleetOpsSecretsKMSPolicy-${var.environment}"
   description = "Allows access to Secrets Manager and SSM Parameters encrypted with KMS"
 

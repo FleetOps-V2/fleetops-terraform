@@ -18,6 +18,8 @@ locals {
 }
 
 resource "aws_eks_cluster" "main" {
+  #checkov:skip=CKV_AWS_38:Public endpoint is required for GitHub Actions CI/CD and developer kubectl access
+  #checkov:skip=CKV_AWS_39:Public endpoint intentionally enabled; access is restricted via public_access_cidrs
   name     = local.cluster_name
   version  = var.eks_cluster_version
   role_arn = var.eks_cluster_role_arn != "" ? var.eks_cluster_role_arn : aws_iam_role.eks_cluster.arn
@@ -28,6 +30,13 @@ resource "aws_eks_cluster" "main" {
     endpoint_public_access  = true   # kubectl access from outside
     endpoint_private_access = true   # node-to-API internal access
     public_access_cidrs     = var.public_access_cidrs
+  }
+
+  encryption_config {
+    provider {
+      key_arn = var.kms_secrets_key_arn
+    }
+    resources = ["secrets"]
   }
 
   access_config {

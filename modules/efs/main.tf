@@ -6,11 +6,13 @@
 
 locals {
   name_prefix = "${var.project}-${var.environment}"
-  common_tags = { Project = var.project
+  common_tags = {
+    Project     = var.project
     Environment = var.environment
-    ManagedBy = "terraform"
-    Module = "efs" }
-    Owner       = "FleetOps-Team" }
+    ManagedBy   = "terraform"
+    Module      = "efs"
+    Owner       = "FleetOps-Team"
+  }
 }
 
 resource "aws_efs_file_system" "main" {

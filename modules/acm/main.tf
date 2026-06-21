@@ -4,11 +4,13 @@
 # TODO: Implement in Phase 2B
 locals {
   name_prefix = "${var.project}-${var.environment}"
-  common_tags = { Project = var.project
+  common_tags = {
+    Project     = var.project
     Environment = var.environment
-    ManagedBy = "terraform"
-    Module = "acm" }
-    Owner       = "FleetOps-Team" }
+    ManagedBy   = "terraform"
+    Module      = "acm"
+    Owner       = "FleetOps-Team"
+  }
 }
 
 resource "aws_acm_certificate" "main" {

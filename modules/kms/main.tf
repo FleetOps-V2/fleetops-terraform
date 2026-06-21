@@ -5,6 +5,7 @@
 # =============================================================
 
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 locals {
   account_id  = data.aws_caller_identity.current.account_id
@@ -84,13 +85,12 @@ resource "aws_kms_alias" "terraform_state" {
   target_key_id = aws_kms_key.terraform_state.key_id
 }
 
-# "?"? Event/Observability Encryption Key "?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?"?
+# Event/Observability Encryption Key
 resource "aws_kms_key" "events" {
   description             = "FleetOps Events, SQS, SNS, DynamoDB encryption key"
   deletion_window_in_days = 30
   enable_key_rotation     = true
-  
-  # For SNS/SQS, EventBridge must be allowed to use the key
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -109,11 +109,27 @@ resource "aws_kms_key" "events" {
         Resource  = "*"
       },
       {
-        Sid       = "Allow CloudWatch to use the key"
-        Effect    = "Allow"
-        Principal = { Service = "cloudwatch.amazonaws.com" }
-        Action    = ["kms:Decrypt", "kms:GenerateDataKey"]
-        Resource  = "*"
+        Sid    = "Allow CloudWatch and CloudTrail to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = ["cloudwatch.amazonaws.com", "cloudtrail.amazonaws.com"]
+        }
+        Action   = ["kms:Decrypt", "kms:GenerateDataKey*", "kms:DescribeKey"]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CloudWatch Logs to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.${data.aws_region.current.name}.amazonaws.com"
+        }
+        Action   = ["kms:Encrypt*", "kms:Decrypt*", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:Describe*"]
+        Resource = "*"
+        Condition = {
+          ArnLike = {
+            "kms:EncryptionContext:aws:logs:arn" = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:*"
+          }
+        }
       }
     ]
   })

@@ -30,6 +30,10 @@ resource "aws_dynamodb_table" "telemetry" {
     kms_key_arn = var.kms_events_key_arn
   }
 
+  point_in_time_recovery {
+    enabled = true
+  }
+
   tags = local.common_tags
 }
 

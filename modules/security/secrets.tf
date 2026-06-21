@@ -1,5 +1,6 @@
 # Secrets Manager - Database Credentials Template
 resource "aws_secretsmanager_secret" "db_credentials" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
   name                    = "fleetops/${var.environment}/database/credentials"
   description             = "Database credentials for FleetOps PostgreSQL"
   kms_key_id              = aws_kms_key.secrets_key.arn
@@ -25,6 +26,7 @@ resource "aws_secretsmanager_secret_version" "db_credentials_placeholder" {
 
 # Secrets Manager - JWT Secret Key
 resource "aws_secretsmanager_secret" "jwt_secret" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
   name                    = "fleetops/${var.environment}/auth/jwt-secret"
   description             = "JWT Secret key for Auth Service"
   kms_key_id              = aws_kms_key.secrets_key.arn
@@ -47,6 +49,7 @@ resource "aws_secretsmanager_secret_version" "jwt_secret_placeholder" {
 
 # Secrets Manager - Bedrock Cross-Account Credentials
 resource "aws_secretsmanager_secret" "bedrock_credentials" {
+  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; cross-account Bedrock credentials rotated manually
   name                    = "fleetops/${var.environment}/bedrock/credentials"
   description             = "Cross-account Bedrock IAM credentials for Nova Lite"
   kms_key_id              = aws_kms_key.secrets_key.arn
@@ -85,6 +88,7 @@ resource "aws_ssm_parameter" "redis_endpoint" {
 
 # SSM Parameter Store - CORS Allowed Origins
 resource "aws_ssm_parameter" "cors_origins" {
+  #checkov:skip=CKV2_AWS_34:Non-sensitive CORS origin list; not a secret
   name        = "/fleetops/${var.environment}/cors/origins"
   description = "Comma-separated CORS allowed origins"
   type        = "String"
