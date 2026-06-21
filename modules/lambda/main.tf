@@ -44,6 +44,12 @@ resource "aws_lambda_function" "alert_processor" {
     }
   }
 
+  # Placeholder zip hash differs between Windows (local) and Linux (CI/CD) runners.
+  # Real Lambda code is deployed via service CI/CD pipelines, not Terraform.
+  lifecycle {
+    ignore_changes = [source_code_hash, last_modified]
+  }
+
   tags = local.common_tags
 }
 
@@ -69,6 +75,10 @@ resource "aws_lambda_function" "metadata_extractor" {
     variables = {
       ENVIRONMENT = var.environment
     }
+  }
+
+  lifecycle {
+    ignore_changes = [source_code_hash, last_modified]
   }
 
   tags = local.common_tags
