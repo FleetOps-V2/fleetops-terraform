@@ -36,7 +36,8 @@ auth_service_url    = "http://fleetops-auth-service:8080"
 # Set after first K8s deploy
 origin_alb_dns = ""
 
-# EKS cluster access
+# EKS cluster access — deployer user + GitHub Actions role (needed for Helm provider in CI/CD)
 admin_iam_user_arns = [
-  "arn:aws:iam::538661800892:user/fleetops-terraform-deployer"
+  "arn:aws:iam::538661800892:user/fleetops-terraform-deployer",
+  "arn:aws:iam::538661800892:role/fleetops-prod-github-actions-role",
 ]
