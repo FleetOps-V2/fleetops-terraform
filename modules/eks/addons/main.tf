@@ -386,7 +386,6 @@ resource "helm_release" "argocd" {
   # the webhook call fails with "no endpoints available". Wait for it first.
   depends_on = [helm_release.aws_load_balancer_controller]
 
-  # Automatically bootstrap the Root Application!
   values = [
     yamlencode({
       global = {
@@ -407,32 +406,52 @@ resource "helm_release" "argocd" {
       }
       server = {
         extraArgs = ["--insecure"] # TLS terminates at ALB; server runs plain HTTP internally
-        additionalApplications = [
-          {
-            name      = "fleetops-root-prod"
-            namespace = "argocd"
-            project   = "default"
-            source = {
-              repoURL        = var.argocd_repo_url
-              targetRevision = "HEAD"
-              path           = "argocd/apps/prod"
-            }
-            destination = {
-              server    = "https://kubernetes.default.svc"
-              namespace = "argocd"
-            }
-            syncPolicy = {
-              automated = {
-                prune    = true
-                selfHeal = true
-              }
-              syncOptions = ["CreateNamespace=true"]
-            }
-          }
-        ]
       }
     })
   ]
+}
+
+# Bootstrap the ArgoCD Root Application via kubernetes_manifest.
+# additionalApplications was removed in ArgoCD Helm chart v6.x, so we create
+# the Application resource directly. On every terraform apply this is idempotent.
+resource "kubernetes_manifest" "argocd_root_app" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "fleetops-root-prod"
+      namespace = "argocd"
+      labels = {
+        "app.kubernetes.io/name"        = "fleetops-root-prod"
+        "app.kubernetes.io/environment" = "prod"
+        "app.kubernetes.io/component"   = "root"
+      }
+      annotations = {
+        "argocd.argoproj.io/sync-wave" = "0"
+      }
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = var.argocd_repo_url
+        targetRevision = "HEAD"
+        path           = "argocd/apps/prod"
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "argocd"
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true
+          selfHeal = true
+        }
+        syncOptions = ["CreateNamespace=true"]
+      }
+    }
+  }
+
+  depends_on = [helm_release.argocd, kubernetes_secret.argocd_repo]
 }
 
 # -- EKS Managed Add-on: Amazon CloudWatch Observability ---------------------

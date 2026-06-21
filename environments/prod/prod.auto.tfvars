@@ -33,8 +33,8 @@ argocd_repo_url = "https://github.com/FleetOps-V2/fleetops-deployments.git"
 vehicle_service_url = "http://fleetops-vehicle-service:8080"
 auth_service_url    = "http://fleetops-auth-service:8080"
 
-# Set after first K8s deploy
-origin_alb_dns = ""
+# Set after first K8s deploy — shared ALB created by ALB controller (group: fleetops)
+origin_alb_dns = "k8s-fleetops-69397799c8-1893864686.us-east-1.elb.amazonaws.com"
 
 # EKS cluster access — deployer user + GitHub Actions role (needed for Helm provider in CI/CD)
 admin_iam_user_arns = [
