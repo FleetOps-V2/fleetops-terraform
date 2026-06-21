@@ -3,7 +3,7 @@
 # Allows GitHub Actions workflows to assume an AWS IAM role
 # using a short-lived OIDC token — no long-lived access keys.
 #
-# Trust scope: restricted to the fleetops-infra repository only.
+# Trust scope: restricted to the fleetops-terraform repository only.
 # Any branch or workflow_dispatch trigger is permitted within
 # that repo; no other GitHub org or repo can assume this role.
 # =============================================================

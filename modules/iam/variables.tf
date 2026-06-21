@@ -61,7 +61,7 @@ variable "bedrock_policy_arn" {
 variable "github_repo" {
   type        = string
   description = "GitHub repository in 'org/repo' format allowed to assume the GitHub Actions role."
-  default     = "FleetOps-V2/fleetops-infra"
+  default     = "FleetOps-V2/fleetops-terraform"
 }
 
 
