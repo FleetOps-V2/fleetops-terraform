@@ -46,6 +46,20 @@ variable "domain_name" {
   description = "Base domain name (e.g. fleetops.website) — used to construct the ArgoCD hostname"
 }
 
+variable "bedrock_access_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "AWS access key for the paid Bedrock account (cross-account, not IRSA). Leave empty to skip secret creation."
+}
+
+variable "bedrock_secret_key" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "AWS secret key for the paid Bedrock account (cross-account, not IRSA). Leave empty to skip secret creation."
+}
+
 
 
 

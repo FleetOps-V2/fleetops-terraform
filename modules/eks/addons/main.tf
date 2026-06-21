@@ -49,6 +49,10 @@ resource "aws_iam_role" "alb_controller" {
 }
 
 resource "aws_iam_policy" "alb_controller" {
+  #checkov:skip=CKV_AWS_288:ALB Controller requires wildcard resource for ElasticLoadBalancing APIs
+  #checkov:skip=CKV_AWS_289:ALB Controller requires resource management permissions for ALB provisioning
+  #checkov:skip=CKV_AWS_290:ALB Controller requires write access to create/modify load balancers
+  #checkov:skip=CKV_AWS_355:ALB Controller policy is AWS-recommended; wildcard resources are scoped by action type
   name        = "${local.name_prefix}-alb-controller-policy"
   description = "IAM policy for AWS Load Balancer Controller"
 
@@ -159,6 +163,9 @@ resource "aws_iam_role" "cluster_autoscaler" {
 }
 
 resource "aws_iam_role_policy" "cluster_autoscaler" {
+  #checkov:skip=CKV_AWS_288:Cluster Autoscaler requires wildcard EC2 and autoscaling describe permissions
+  #checkov:skip=CKV_AWS_290:Cluster Autoscaler requires write access to modify autoscaling groups
+  #checkov:skip=CKV_AWS_355:Cluster Autoscaler policy follows AWS recommended pattern; autoscaling actions require wildcard
   name = "${local.name_prefix}-cluster-autoscaler-policy"
   role = aws_iam_role.cluster_autoscaler.id
 
@@ -493,6 +500,34 @@ resource "kubernetes_secret" "argocd_repo" {
   }
 
   depends_on = [helm_release.argocd]
+}
+
+resource "kubernetes_namespace" "fleetops_prod" {
+  count = var.bedrock_access_key != "" ? 1 : 0
+
+  metadata {
+    name = "fleetops-prod"
+  }
+
+  lifecycle {
+    # ArgoCD adds its own labels/annotations to the namespace — ignore them to avoid perpetual drift
+    ignore_changes = [metadata[0].labels, metadata[0].annotations]
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
+resource "kubernetes_secret" "bedrock" {
+  count = var.bedrock_access_key != "" ? 1 : 0
+
+  metadata {
+    name      = "fleetops-bedrock-secret"
+    namespace = kubernetes_namespace.fleetops_prod[0].metadata[0].name
+  }
+  data = {
+    BEDROCK_ACCESS_KEY = var.bedrock_access_key
+    BEDROCK_SECRET_KEY = var.bedrock_secret_key
+  }
 }
 
 # -- ArgoCD Ingress (ALB) -----------------------------------------------------
