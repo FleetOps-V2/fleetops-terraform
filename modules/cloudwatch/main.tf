@@ -84,8 +84,8 @@ resource "aws_cloudwatch_metric_alarm" "rds_connections_high" {
   namespace           = "AWS/RDS"
   period              = 300
   statistic           = "Average"
-  threshold           = 20
-  alarm_description   = "RDS connection count approaching pool limit (4 services x 2 pods x 3 pool = 24 max)"
+  threshold           = 60
+  alarm_description   = "RDS connection count high (4 services x max 5 pods x 3 pool = 60 max)"
   alarm_actions       = [var.service_alerts_topic_arn]
 
   dimensions = {
