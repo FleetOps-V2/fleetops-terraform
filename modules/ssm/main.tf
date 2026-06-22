@@ -1,9 +1,3 @@
-# =============================================================
-# Module: ssm  |  Phase: 2A
-# Non-sensitive configuration parameters (endpoints, config values)
-# Sensitive values go to Secrets Manager — SSM holds public config
-# =============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {

@@ -167,7 +167,6 @@ resource "aws_cloudfront_distribution" "main" {
   depends_on = [aws_s3_bucket_ownership_controls.cf_logs]
 }
 
-# Create the Alias record pointing the root domain to CloudFront
 resource "aws_route53_record" "cf_alias" {
   zone_id = var.hosted_zone_id
   name    = var.domain_name

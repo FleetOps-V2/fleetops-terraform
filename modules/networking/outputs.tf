@@ -14,8 +14,13 @@ output "public_subnet_ids" {
 }
 
 output "private_subnet_ids" {
-  description = "IDs of the private subnets (for EKS nodes, RDS, Redis)"
+  description = "IDs of the private subnets (for EKS nodes)"
   value       = aws_subnet.private[*].id
+}
+
+output "database_subnet_ids" {
+  description = "IDs of the isolated database subnets (for RDS and ElastiCache)"
+  value       = aws_subnet.database[*].id
 }
 
 output "alb_sg_id" {

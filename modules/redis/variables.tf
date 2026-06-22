@@ -5,8 +5,9 @@ variable "project" {
   type    = string
   default = "fleetops"
 }
-variable "private_subnet_ids" {
-  type = list(string)
+variable "db_subnet_ids" {
+  type        = list(string)
+  description = "IDs of the isolated database subnets for the ElastiCache subnet group"
 }
 variable "redis_sg_id" {
   type = string

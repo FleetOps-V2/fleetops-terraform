@@ -55,8 +55,6 @@ provider "kubernetes" {
 
 data "aws_caller_identity" "current" {}
 
-# ── Core Infrastructure ───────────────────────────────────────
-
 module "kms" {
   source      = "../../modules/kms"
   project     = "fleetops"
@@ -71,6 +69,7 @@ module "networking" {
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
+  db_subnet_cidrs      = var.db_subnet_cidrs
   availability_zones   = var.availability_zones
 }
 
@@ -85,19 +84,14 @@ module "iam" {
   k8s_namespace            = var.k8s_namespace
   k8s_service_account_name = var.k8s_service_account_name
 
-  dynamodb_telemetry_arn = module.dynamodb.telemetry_table_arn
-  sqs_gps_queue_arn      = module.sqs.gps_tracking_queue_arn
   sns_alerts_topic_arn   = module.sns.service_alerts_topic_arn
-  bedrock_policy_arn     = module.bedrock.bedrock_access_policy_arn
 }
-
-# ── Data & Storage ────────────────────────────────────────────
 
 module "rds" {
   source                     = "../../modules/rds"
   project                    = "fleetops"
   environment                = var.environment
-  private_subnet_ids         = module.networking.private_subnet_ids
+  db_subnet_ids              = module.networking.database_subnet_ids
   rds_sg_id                  = module.networking.rds_sg_id
   kms_rds_key_arn            = module.kms.rds_key_arn
   db_instance_class          = var.db_instance_class
@@ -110,7 +104,7 @@ module "redis" {
   source             = "../../modules/redis"
   project            = "fleetops"
   environment        = var.environment
-  private_subnet_ids = module.networking.private_subnet_ids
+  db_subnet_ids      = module.networking.database_subnet_ids
   redis_sg_id        = module.networking.redis_sg_id
   redis_node_type    = var.redis_node_type
 }
@@ -144,25 +138,12 @@ module "secrets_manager" {
   github_pat          = var.github_pat
 }
 
-module "ssm" {
-  source                  = "../../modules/ssm"
-  project                 = "fleetops"
-  environment             = var.environment
-  redis_endpoint          = module.redis.redis_endpoint
-  cors_allowed_origins    = "https://${var.domain_name}"
-  app_base_url            = "https://${var.domain_name}"
-  insurance_sns_topic_arn = module.sns.insurance_alerts_topic_arn
-  service_sns_topic_arn   = module.sns.service_alerts_topic_arn
-}
-
 module "route53" {
   source      = "../../modules/route53"
   project     = "fleetops"
   environment = var.environment
   domain_name = var.domain_name
 }
-
-# ── EKS ──────────────────────────────────────────────────────
 
 module "eks_cluster" {
   source              = "../../modules/eks/cluster"
@@ -216,8 +197,6 @@ module "eks_addons" {
   depends_on = [module.eks_nodegroup, module.secrets_manager]
 }
 
-# ── Security group rules: EKS cluster SG → RDS/Redis ─────────
-
 resource "aws_vpc_security_group_ingress_rule" "rds_from_eks_cluster_sg" {
   security_group_id            = module.networking.rds_sg_id
   referenced_security_group_id = module.eks_cluster.cluster_sg_id
@@ -255,8 +234,6 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_pods_80" {
   description                  = "ALB to frontend pods on 80 (nginx)"
 }
 
-# ── Route53 aliases (set origin_alb_dns after first K8s deploy) ──
-
 resource "aws_route53_record" "origin_alb_alias" {
   #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
   count = var.origin_alb_dns != "" ? 1 : 0
@@ -287,27 +264,12 @@ resource "aws_route53_record" "argocd" {
   }
 }
 
-# ── Events & Messaging ────────────────────────────────────────
-
 module "sns" {
   source          = "../../modules/sns"
   project         = "fleetops"
   environment     = var.environment
   kms_sns_key_arn = module.kms.events_key_arn
-}
-
-module "sqs" {
-  source             = "../../modules/sqs"
-  project            = "fleetops"
-  environment        = var.environment
-  kms_events_key_arn = module.kms.events_key_arn
-}
-
-module "dynamodb" {
-  source             = "../../modules/dynamodb"
-  project            = "fleetops"
-  environment        = var.environment
-  kms_events_key_arn = module.kms.events_key_arn
+  alert_emails    = var.alert_emails
 }
 
 module "eventbridge" {
@@ -325,8 +287,6 @@ module "step_functions" {
   kms_key_arn = module.kms.events_key_arn
 }
 
-# ── Lambda ────────────────────────────────────────────────────
-
 module "lambda" {
   source                                = "../../modules/lambda"
   project                               = "fleetops"
@@ -339,8 +299,6 @@ module "lambda" {
   service_sns_arn                       = module.sns.service_alerts_topic_arn
 }
 
-# ── Observability & Governance ────────────────────────────────
-
 module "cloudwatch" {
   source                   = "../../modules/cloudwatch"
   project                  = "fleetops"
@@ -348,6 +306,8 @@ module "cloudwatch" {
   service_alerts_topic_arn = module.sns.service_alerts_topic_arn
   rds_instance_identifier  = module.rds.db_identifier
   kms_key_arn              = module.kms.events_key_arn
+  lambda_function_name     = module.lambda.alert_processor_function_name
+  alb_arn_suffix           = var.alb_arn_suffix
 }
 
 module "cloudtrail" {
@@ -362,8 +322,6 @@ module "config_aws" {
   project     = "fleetops"
   environment = var.environment
 }
-
-# ── Security & CDN ────────────────────────────────────────────
 
 module "waf" {
   source      = "../../modules/waf"
@@ -389,8 +347,3 @@ module "cloudfront" {
   hosted_zone_id      = module.route53.zone_id
 }
 
-module "bedrock" {
-  source      = "../../modules/bedrock"
-  project     = "fleetops"
-  environment = var.environment
-}

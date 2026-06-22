@@ -1,8 +1,3 @@
-# =============================================================
-# Module: eks/cluster  |  Phase: 2B
-# Provisions the EKS Control Plane
-# =============================================================
-
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -56,7 +51,6 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
-# ── EKS Cluster IAM Role ──────────────────────────────────────
 resource "aws_iam_role" "eks_cluster" {
   name = "${local.name_prefix}-eks-cluster-role"
 

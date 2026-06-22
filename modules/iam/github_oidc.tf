@@ -1,14 +1,3 @@
-# =============================================================
-# GitHub Actions OIDC Federation
-# Allows GitHub Actions workflows to assume an AWS IAM role
-# using a short-lived OIDC token — no long-lived access keys.
-#
-# Trust scope: restricted to the fleetops-terraform repository only.
-# Any branch or workflow_dispatch trigger is permitted within
-# that repo; no other GitHub org or repo can assume this role.
-# =============================================================
-
-# GitHub's OIDC provider — one per AWS account, shared across repos
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
@@ -22,7 +11,6 @@ resource "aws_iam_openid_connect_provider" "github" {
   tags = merge(local.common_tags, { Name = "github-actions-oidc-provider" })
 }
 
-# IAM Role assumed by GitHub Actions via OIDC token
 resource "aws_iam_role" "github_actions" {
   name = "${local.name_prefix}-github-actions-role"
 
@@ -49,19 +37,12 @@ resource "aws_iam_role" "github_actions" {
   tags = local.common_tags
 }
 
-# Terraform requires broad permissions to provision all FleetOps infrastructure.
-# AdministratorAccess is used here for the training environment.
-# Production recommendation: replace with a PermissionsBoundary or
-# service-specific policies scoped to the resources Terraform manages.
 resource "aws_iam_role_policy_attachment" "github_actions_admin" {
   #checkov:skip=CKV_AWS_274:AdministratorAccess required for Terraform CI/CD in training environment; production should use scoped policies with PermissionsBoundary
   role       = aws_iam_role.github_actions.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
-# ── ECR Push Role for service repos ──────────────────────────────────────────
-# Trusted by all FleetOps-V2 service repos (fleetops-*-service, fleetops-frontend).
-# Scoped to ECR only — no Terraform/admin access. Follows least-privilege.
 resource "aws_iam_role" "github_actions_ecr" {
   name = "${local.name_prefix}-github-actions-ecr-role"
 

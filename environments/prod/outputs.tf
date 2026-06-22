@@ -33,3 +33,5 @@ output "eks_cluster_endpoint" { value = module.eks_cluster.cluster_endpoint }
 output "github_actions_role_arn" { value = module.iam.github_actions_role_arn }
 output "github_actions_ecr_role_arn" { value = module.iam.github_actions_ecr_role_arn }
 output "devops_agent_role_arn" { value = module.iam.devops_agent_role_arn }
+output "step_functions_arn" { value = module.step_functions.request_workflow_arn }
+output "efs_access_point_id" { value = module.efs.efs_access_point_id }

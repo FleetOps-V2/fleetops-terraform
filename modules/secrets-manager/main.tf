@@ -1,10 +1,3 @@
-# =============================================================
-# Module: secrets-manager  |  Phase: 2A
-# Provisions credential templates for DB + JWT
-# Actual values are injected via Terraform variables (from tfvars
-# or CI/CD pipeline env vars) — never hardcoded
-# =============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
@@ -16,7 +9,6 @@ locals {
   }
 }
 
-# ── Database Master Credentials ───────────────────────────────
 resource "aws_secretsmanager_secret" "db" {
   #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
   name                    = "${var.project}/${var.environment}/db"
@@ -38,7 +30,6 @@ resource "aws_secretsmanager_secret_version" "db" {
   })
 }
 
-# ── JWT Signing Secret ────────────────────────────────────────
 resource "aws_secretsmanager_secret" "jwt" {
   #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; managed manually for this project
   name                    = "${var.project}/${var.environment}/jwt"
@@ -54,7 +45,6 @@ resource "aws_secretsmanager_secret_version" "jwt" {
   secret_string = jsonencode({ jwt_secret = var.jwt_secret })
 }
 
-# ── Lambda Service Account Credentials ───────────────────────
 # Auto-generated on first apply. Stored here so both the auth service
 # (to seed the user) and the Lambda (to log in) can read the same value.
 resource "random_password" "lambda_service" {
@@ -81,7 +71,6 @@ resource "aws_secretsmanager_secret_version" "lambda_service_credentials" {
   })
 }
 
-# ── GitHub PAT for ArgoCD ─────────────────────────────────────
 # ArgoCD uses this to pull from the private fleetops-deployments repo.
 # recovery_window_in_days = 0 for dev so destroy + apply works immediately.
 resource "aws_secretsmanager_secret" "github_pat" {

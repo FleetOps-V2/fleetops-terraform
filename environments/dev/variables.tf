@@ -10,7 +10,6 @@ variable "domain_name" {
   default = "fleetops.website"
 }
 
-# Networking
 variable "vpc_cidr" {
   type = string
 }
@@ -22,12 +21,16 @@ variable "private_subnet_cidrs" {
   type    = list(string)
   default = ["10.0.10.0/24", "10.0.11.0/24"]
 }
+variable "db_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for the isolated database subnets (RDS + ElastiCache)"
+  default     = ["10.0.20.0/24", "10.0.21.0/24"]
+}
 variable "availability_zones" {
   type    = list(string)
   default = ["us-east-1a", "us-east-1b"]
 }
 
-# Database
 variable "db_instance_class" {
   type    = string
   default = "db.t3.micro"
@@ -45,19 +48,16 @@ variable "enable_deletion_protection" {
   default = false
 }
 
-# Cache
 variable "redis_node_type" {
   type    = string
   default = "cache.t3.micro"
 }
 
-# Secrets
 variable "jwt_secret" {
   type      = string
   sensitive = true
 }
 
-# EKS — Phase 2B (defaults allow plan to succeed before EKS exists)
 variable "eks_cluster_version" {
   type    = string
   default = "1.31"
@@ -91,16 +91,12 @@ variable "k8s_service_account_name" {
   default = "fleetops-app"
 }
 
-# Admin users granted cluster-admin via EKS Access Entries.
-# Avoids hardcoding ARNs in module calls.
 variable "admin_iam_user_arns" {
   type        = list(string)
   default     = []
   description = "IAM user ARNs to grant EKS cluster-admin access."
 }
 
-# Restrict the EKS public API endpoint to known CIDRs (VPN, bastion, CI runner).
-# Default allows all IPs — tighten before going to production.
 variable "eks_public_access_cidrs" {
   type        = list(string)
   default     = ["0.0.0.0/0"]
@@ -119,8 +115,6 @@ variable "argocd_repo_url" {
   description = "Git repository URL for the ArgoCD root application."
 }
 
-# Set this after first K8s deploy: kubectl get ingress -n fleetops -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}'
-# Leave empty on first apply — the Route53 alias record is skipped until the ALB exists.
 variable "origin_alb_dns" {
   type        = string
   default     = ""
@@ -137,6 +131,18 @@ variable "auth_service_url" {
   type        = string
   default     = "http://auth-service:8080"
   description = "Internal cluster URL of the auth service for Lambda JWT login."
+}
+
+variable "alert_emails" {
+  type        = list(string)
+  description = "Email addresses subscribed to SNS insurance and service alert topics."
+  default     = []
+}
+
+variable "alb_arn_suffix" {
+  type        = string
+  description = "ARN suffix of the ALB. Leave empty on first apply — 5xx alarm is skipped until ALB exists."
+  default     = ""
 }
 
 

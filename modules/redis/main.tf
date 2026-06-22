@@ -1,8 +1,3 @@
-# =============================================================
-# Module: redis  |  Phase: 2A
-# cache.t3.micro — Free Tier, single-node ElastiCache
-# =============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
@@ -16,7 +11,7 @@ locals {
 
 resource "aws_elasticache_subnet_group" "main" {
   name       = "${local.name_prefix}-redis-subnet-group"
-  subnet_ids = var.private_subnet_ids
+  subnet_ids = var.db_subnet_ids
   tags       = local.common_tags
 }
 

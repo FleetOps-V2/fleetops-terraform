@@ -149,7 +149,6 @@ resource "aws_config_configuration_recorder_status" "main" {
   depends_on = [aws_config_delivery_channel.main]
 }
 
-# AWS Config Rules
 resource "aws_config_config_rule" "rds_storage_encrypted" {
   name = "rds-storage-encrypted"
   source {

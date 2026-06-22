@@ -31,11 +31,6 @@ provider "aws" {
   }
 }
 
-# ── Phase 2B: Helm + Kubernetes providers ─────────────────────
-# Dynamically configured from EKS cluster outputs.
-# On first apply (Phase 2A only), these providers will have empty
-# endpoints and are harmless — helm_release resources have explicit
-# depends_on on the cluster module.
 provider "helm" {
   kubernetes {
     host                   = try(module.eks_cluster.cluster_endpoint, "")
@@ -58,8 +53,6 @@ provider "kubernetes" {
   }
 }
 
-# ── Phase 2A Module Calls ─────────────────────────────────────
-
 data "aws_caller_identity" "current" {}
 
 module "kms" {
@@ -76,6 +69,7 @@ module "networking" {
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
+  db_subnet_cidrs      = var.db_subnet_cidrs
   availability_zones   = var.availability_zones
 }
 
@@ -90,18 +84,14 @@ module "iam" {
   k8s_namespace            = var.k8s_namespace
   k8s_service_account_name = var.k8s_service_account_name
 
-  # Event ARNs for IRSA policies (Phases 4-7)
-  dynamodb_telemetry_arn = module.dynamodb.telemetry_table_arn
-  sqs_gps_queue_arn      = module.sqs.gps_tracking_queue_arn
   sns_alerts_topic_arn   = module.sns.service_alerts_topic_arn
-  bedrock_policy_arn     = module.bedrock.bedrock_access_policy_arn
 }
 
 module "rds" {
   source                     = "../../modules/rds"
   project                    = "fleetops"
   environment                = var.environment
-  private_subnet_ids         = module.networking.private_subnet_ids
+  db_subnet_ids              = module.networking.database_subnet_ids
   rds_sg_id                  = module.networking.rds_sg_id
   kms_rds_key_arn            = module.kms.rds_key_arn
   db_instance_class          = var.db_instance_class
@@ -114,7 +104,7 @@ module "redis" {
   source             = "../../modules/redis"
   project            = "fleetops"
   environment        = var.environment
-  private_subnet_ids = module.networking.private_subnet_ids
+  db_subnet_ids      = module.networking.database_subnet_ids
   redis_sg_id        = module.networking.redis_sg_id
   redis_node_type    = var.redis_node_type
 }
@@ -148,25 +138,12 @@ module "secrets_manager" {
   github_pat          = var.github_pat
 }
 
-module "ssm" {
-  source                  = "../../modules/ssm"
-  project                 = "fleetops"
-  environment             = var.environment
-  redis_endpoint          = module.redis.redis_endpoint
-  cors_allowed_origins    = "https://${var.domain_name}"
-  app_base_url            = "https://${var.domain_name}"
-  insurance_sns_topic_arn = module.sns.insurance_alerts_topic_arn
-  service_sns_topic_arn   = module.sns.service_alerts_topic_arn
-}
-
 module "route53" {
   source      = "../../modules/route53"
   project     = "fleetops"
   environment = var.environment
   domain_name = var.domain_name
 }
-
-# ── Phase 2B Module Calls ─────────────────────────────────────
 
 module "eks_cluster" {
   source              = "../../modules/eks/cluster"
@@ -201,8 +178,6 @@ module "eks_nodegroup" {
   desired_size       = var.eks_node_desired_size
 }
 
-# EKS managed nodes get the auto-created cluster SG, not the node group SG.
-# These rules let pods reach RDS and Redis through the cluster SG.
 resource "aws_vpc_security_group_ingress_rule" "rds_from_eks_cluster_sg" {
   security_group_id            = module.networking.rds_sg_id
   referenced_security_group_id = module.eks_cluster.cluster_sg_id
@@ -305,6 +280,7 @@ module "sns" {
   project         = "fleetops"
   environment     = var.environment
   kms_sns_key_arn = module.kms.events_key_arn
+  alert_emails    = var.alert_emails
 }
 
 module "lambda" {
@@ -327,20 +303,6 @@ module "eventbridge" {
   alert_processor_lambda_name = module.lambda.alert_processor_function_name
 }
 
-module "dynamodb" {
-  source             = "../../modules/dynamodb"
-  project            = "fleetops"
-  environment        = var.environment
-  kms_events_key_arn = module.kms.events_key_arn
-}
-
-module "sqs" {
-  source             = "../../modules/sqs"
-  project            = "fleetops"
-  environment        = var.environment
-  kms_events_key_arn = module.kms.events_key_arn
-}
-
 module "step_functions" {
   source      = "../../modules/step-functions"
   project     = "fleetops"
@@ -355,6 +317,8 @@ module "cloudwatch" {
   service_alerts_topic_arn = module.sns.service_alerts_topic_arn
   rds_instance_identifier  = module.rds.db_identifier
   kms_key_arn              = module.kms.events_key_arn
+  lambda_function_name     = module.lambda.alert_processor_function_name
+  alb_arn_suffix           = var.alb_arn_suffix
 }
 
 module "cloudtrail" {
@@ -372,12 +336,6 @@ module "waf" {
 
 module "config_aws" {
   source      = "../../modules/config"
-  project     = "fleetops"
-  environment = var.environment
-}
-
-module "bedrock" {
-  source      = "../../modules/bedrock"
   project     = "fleetops"
   environment = var.environment
 }

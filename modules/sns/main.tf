@@ -1,9 +1,3 @@
-# ============================================================
-# Module: sns
-# Phase:  4
-# Description: Insurance expiry alerts, service due alerts
-# ============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
@@ -27,7 +21,6 @@ resource "aws_sns_topic" "service_alerts" {
   tags              = local.common_tags
 }
 
-# Add IAM policy to allow CloudWatch and EventBridge to publish to SNS
 resource "aws_sns_topic_policy" "insurance_alerts" {
   arn = aws_sns_topic.insurance_alerts.arn
 
@@ -60,6 +53,20 @@ resource "aws_sns_topic_policy" "service_alerts" {
       }
     ]
   })
+}
+
+resource "aws_sns_topic_subscription" "insurance_alerts_email" {
+  for_each  = toset(var.alert_emails)
+  topic_arn = aws_sns_topic.insurance_alerts.arn
+  protocol  = "email"
+  endpoint  = each.value
+}
+
+resource "aws_sns_topic_subscription" "service_alerts_email" {
+  for_each  = toset(var.alert_emails)
+  topic_arn = aws_sns_topic.service_alerts.arn
+  protocol  = "email"
+  endpoint  = each.value
 }
 
 

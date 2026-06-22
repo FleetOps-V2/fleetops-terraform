@@ -1,10 +1,3 @@
-# =============================================================
-# Module: networking
-# Phase:  2A
-# Provisions: VPC, Subnets, IGW, Route Tables, Security Groups,
-#             VPC Endpoints (no NAT Gateway)
-# =============================================================
-
 locals {
   name_prefix = "fleetops-${var.environment}"
   common_tags = {
@@ -15,7 +8,6 @@ locals {
   }
 }
 
-# ── VPC ───────────────────────────────────────────────────────
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -28,7 +20,6 @@ resource "aws_vpc" "main" {
   })
 }
 
-# ── Internet Gateway ──────────────────────────────────────────
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
@@ -37,7 +28,6 @@ resource "aws_internet_gateway" "igw" {
   })
 }
 
-# ── Public Subnets (2 AZs) ────────────────────────────────────
 resource "aws_subnet" "public" {
   count                   = length(var.public_subnet_cidrs)
   vpc_id                  = aws_vpc.main.id
@@ -53,7 +43,6 @@ resource "aws_subnet" "public" {
   })
 }
 
-# ── Private Subnets (2 AZs) ───────────────────────────────────
 resource "aws_subnet" "private" {
   count             = length(var.private_subnet_cidrs)
   vpc_id            = aws_vpc.main.id
@@ -68,7 +57,18 @@ resource "aws_subnet" "private" {
   })
 }
 
-# ── Route Tables ──────────────────────────────────────────────
+resource "aws_subnet" "database" {
+  count             = length(var.db_subnet_cidrs)
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.db_subnet_cidrs[count.index]
+  availability_zone = var.availability_zones[count.index]
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-database-subnet-${count.index + 1}"
+    Tier = "database"
+  })
+}
+
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -82,7 +82,6 @@ resource "aws_route_table" "public" {
   })
 }
 
-# ── NAT Gateway (single AZ) ───────────────────────────────────
 # Required for ArgoCD → GitHub and cluster-autoscaler → AWS APIs.
 resource "aws_eip" "nat" {
   domain = "vpc"
@@ -121,9 +120,20 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-# ── Security Groups ───────────────────────────────────────────
+resource "aws_route_table" "database" {
+  vpc_id = aws_vpc.main.id
 
-# ALB — accepts public HTTP/HTTPS
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-database-rt"
+  })
+}
+
+resource "aws_route_table_association" "database" {
+  count          = length(aws_subnet.database)
+  subnet_id      = aws_subnet.database[count.index].id
+  route_table_id = aws_route_table.database.id
+}
+
 resource "aws_security_group" "alb" {
   #checkov:skip=CKV2_AWS_5:ALB SG is attached to the ALB managed by the Kubernetes ALB Ingress Controller
   name        = "${local.name_prefix}-alb-sg"
@@ -159,7 +169,6 @@ resource "aws_security_group" "alb" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-alb-sg" })
 }
 
-# EKS Nodes — accepts traffic from ALB and within node group
 resource "aws_security_group" "eks_nodes" {
   #checkov:skip=CKV2_AWS_5:SG is attached to EKS nodes managed by the Kubernetes nodegroup
   #checkov:skip=CKV_AWS_382:Unrestricted egress required for EKS nodes to reach AWS APIs and container registries
@@ -167,7 +176,6 @@ resource "aws_security_group" "eks_nodes" {
   description = "Security group for EKS worker nodes"
   vpc_id      = aws_vpc.main.id
 
-  # Nodes communicate with each other
   ingress {
     description = "Node-to-node communication"
     from_port   = 0
@@ -176,7 +184,6 @@ resource "aws_security_group" "eks_nodes" {
     self        = true
   }
 
-  # ALB sends traffic to node ports (30000-32767)
   ingress {
     description     = "ALB to NodePort range"
     from_port       = 30000
@@ -185,7 +192,6 @@ resource "aws_security_group" "eks_nodes" {
     security_groups = [aws_security_group.alb.id]
   }
 
-  # EKS control plane to nodes (API server → kubelet)
   ingress {
     description     = "EKS control plane to nodes"
     from_port       = 443
@@ -213,7 +219,6 @@ resource "aws_security_group" "eks_nodes" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-eks-nodes-sg" })
 }
 
-# EKS Control Plane
 resource "aws_security_group" "eks_control_plane" {
   #checkov:skip=CKV2_AWS_5:SG is attached to the EKS control plane managed by AWS
   #checkov:skip=CKV_AWS_382:Unrestricted egress required for EKS control plane to reach worker nodes
@@ -232,7 +237,6 @@ resource "aws_security_group" "eks_control_plane" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-eks-control-plane-sg" })
 }
 
-# RDS — only accepts connections from EKS nodes
 resource "aws_security_group" "rds" {
   #checkov:skip=CKV2_AWS_5:SG is attached to RDS instance managed by the rds module
   #checkov:skip=CKV_AWS_382:Unrestricted egress is safe; RDS only accepts targeted ingress from EKS nodes
@@ -266,7 +270,6 @@ resource "aws_security_group" "rds" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-rds-sg" })
 }
 
-# Redis — only accepts connections from EKS nodes
 resource "aws_security_group" "redis" {
   #checkov:skip=CKV2_AWS_5:SG is attached to ElastiCache cluster managed by the redis module
   #checkov:skip=CKV_AWS_382:Unrestricted egress is safe; Redis only accepts targeted ingress from EKS nodes
@@ -298,7 +301,6 @@ resource "aws_security_group" "redis" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-redis-sg" })
 }
 
-# EFS — allows NFS from EKS nodes
 resource "aws_security_group" "efs" {
   #checkov:skip=CKV2_AWS_5:SG is attached to EFS filesystem managed by the efs module
   #checkov:skip=CKV_AWS_382:Unrestricted egress is safe; EFS only accepts targeted NFS ingress from EKS nodes
@@ -324,7 +326,6 @@ resource "aws_security_group" "efs" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-efs-sg" })
 }
 
-# VPC Endpoints — shared security group (allows HTTPS from private subnets)
 resource "aws_security_group" "vpc_endpoints" {
   #checkov:skip=CKV2_AWS_5:SG is attached to all VPC Interface Endpoints defined in this module
   #checkov:skip=CKV_AWS_382:Unrestricted egress required for VPC endpoint responses back to private subnets
@@ -350,8 +351,6 @@ resource "aws_security_group" "vpc_endpoints" {
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-vpc-endpoints-sg" })
 }
-
-# ── VPC Endpoints (replaces NAT Gateway) ──────────────────────
 
 # S3 Gateway Endpoint — FREE, no hourly charge
 # Required: ECR stores image layers in S3
@@ -400,7 +399,6 @@ resource "aws_vpc_endpoint" "sts" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-sts-endpoint" })
 }
 
-# CloudWatch Logs Interface Endpoint — for container log shipping
 resource "aws_vpc_endpoint" "logs" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.logs"
@@ -412,7 +410,6 @@ resource "aws_vpc_endpoint" "logs" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-logs-endpoint" })
 }
 
-# Secrets Manager Interface Endpoint — for pods fetching credentials
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
@@ -424,7 +421,6 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-secretsmanager-endpoint" })
 }
 
-# KMS Interface Endpoint — for envelope encryption used by all services
 resource "aws_vpc_endpoint" "kms" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.kms"
@@ -436,7 +432,6 @@ resource "aws_vpc_endpoint" "kms" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-kms-endpoint" })
 }
 
-# SQS Interface Endpoint — for GPS telemetry queue (Phase 5+)
 resource "aws_vpc_endpoint" "sqs" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.sqs"
@@ -448,7 +443,6 @@ resource "aws_vpc_endpoint" "sqs" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-sqs-endpoint" })
 }
 
-# SNS Interface Endpoint — for fleet alert notifications
 resource "aws_vpc_endpoint" "sns" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.sns"
@@ -460,7 +454,6 @@ resource "aws_vpc_endpoint" "sns" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-sns-endpoint" })
 }
 
-# DynamoDB Gateway Endpoint — free, for telemetry storage (Phase 5+)
 resource "aws_vpc_endpoint" "dynamodb" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.aws_region}.dynamodb"
@@ -470,7 +463,6 @@ resource "aws_vpc_endpoint" "dynamodb" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-dynamodb-endpoint" })
 }
 
-# Bedrock Runtime Interface Endpoint — for AI Maintenance Advisor (Phase 7)
 resource "aws_vpc_endpoint" "bedrock_runtime" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.bedrock-runtime"
@@ -510,8 +502,31 @@ resource "aws_vpc_endpoint" "ec2" {
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-ec2-endpoint" })
 }
 
-# ── Default Security Group — restrict all traffic ─────────────
-# Satisfies CKV2_AWS_12: the default SG must not allow any ingress or egress.
+# SSM Parameter Store Interface Endpoint — used by External Secrets Operator
+# to sync SSM parameters (redis endpoint, SNS ARNs) into K8s secrets
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.ssm"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(local.common_tags, { Name = "${local.name_prefix}-ssm-endpoint" })
+}
+
+# Step Functions Interface Endpoint — used by request-service to start workflow executions
+resource "aws_vpc_endpoint" "step_functions" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.states"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(local.common_tags, { Name = "${local.name_prefix}-sfn-endpoint" })
+}
+
 resource "aws_default_security_group" "default" {
   vpc_id = aws_vpc.main.id
 
@@ -521,7 +536,6 @@ resource "aws_default_security_group" "default" {
   })
 }
 
-# ── VPC Flow Logs ─────────────────────────────────────────────
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   #checkov:skip=CKV_AWS_158:KMS encryption for VPC flow logs is deferred; logs contain no sensitive data
   name              = "/aws/vpc/flow-logs/${local.name_prefix}"

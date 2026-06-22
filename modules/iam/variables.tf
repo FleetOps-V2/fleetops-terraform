@@ -34,27 +34,9 @@ variable "kms_key_arns" {
   default     = []
 }
 
-variable "dynamodb_telemetry_arn" {
-  type        = string
-  description = "ARN of the DynamoDB telemetry table"
-  default     = ""
-}
-
-variable "sqs_gps_queue_arn" {
-  type        = string
-  description = "ARN of the SQS GPS tracking queue"
-  default     = ""
-}
-
 variable "sns_alerts_topic_arn" {
   type        = string
   description = "ARN of the SNS alerts topic"
-  default     = ""
-}
-
-variable "bedrock_policy_arn" {
-  type        = string
-  description = "ARN of the Bedrock access policy"
   default     = ""
 }
 

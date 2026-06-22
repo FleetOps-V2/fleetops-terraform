@@ -5,8 +5,9 @@ variable "project" {
   type    = string
   default = "fleetops"
 }
-variable "private_subnet_ids" {
-  type = list(string)
+variable "db_subnet_ids" {
+  type        = list(string)
+  description = "IDs of the isolated database subnets for the RDS subnet group"
 }
 variable "rds_sg_id" {
   type = string

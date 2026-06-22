@@ -1,10 +1,3 @@
-# =============================================================
-# Module: iam  |  Phase: 2A
-# Provisions: EKS Node Role, App IRSA Role, Lambda Role
-# No static access keys — all roles assumed via instance profile
-# or OIDC federation (IRSA)
-# =============================================================
-
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -16,8 +9,7 @@ locals {
     Owner       = "FleetOps-Team"
   }
 }
-# ── EKS Node Role ─────────────────────────────────────────────
-# Assumed by EC2 instances in the EKS Managed Node Group
+
 resource "aws_iam_role" "eks_node" {
   name = "${local.name_prefix}-eks-node-role"
 
@@ -33,7 +25,6 @@ resource "aws_iam_role" "eks_node" {
   tags = local.common_tags
 }
 
-# AWS managed policies required for EKS nodes
 resource "aws_iam_role_policy_attachment" "eks_worker_node" {
   role       = aws_iam_role.eks_node.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
@@ -76,9 +67,6 @@ resource "aws_iam_role_policy" "eks_node_ecr_pull_through" {
   })
 }
 
-# ── App IRSA Role ─────────────────────────────────────────────
-# Assumed by Kubernetes ServiceAccounts via OIDC federation
-# Grants: Secrets Manager read, SSM read, KMS decrypt, S3 access
 resource "aws_iam_role" "app_service_account" {
   name = "${local.name_prefix}-app-irsa-role"
 
@@ -119,16 +107,6 @@ resource "aws_iam_role_policy" "app_secrets" {
         Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/*"
       },
       {
-        Sid    = "SSMParameterRead"
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter",
-          "ssm:GetParameters",
-          "ssm:GetParametersByPath"
-        ]
-        Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project}/*"
-      },
-      {
         Sid    = "KMSDecrypt"
         Effect = "Allow"
         Action = [
@@ -152,37 +130,49 @@ resource "aws_iam_role_policy" "app_secrets" {
         ]
       },
       {
+        Sid    = "StepFunctionsWorkflow"
+        Effect = "Allow"
+        Action = [
+          "states:StartExecution",
+          "states:DescribeExecution",
+          "states:StopExecution"
+        ]
+        Resource = "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:${var.project}-*"
+      },
+      {
+        Sid    = "EFSClientAccess"
+        Effect = "Allow"
+        Action = [
+          "elasticfilesystem:ClientMount",
+          "elasticfilesystem:ClientWrite",
+          "elasticfilesystem:ClientRootAccess",
+          "elasticfilesystem:DescribeFileSystems",
+          "elasticfilesystem:DescribeMountTargets"
+        ]
+        Resource = "*"
+      },
+      {
         Sid      = "BedrockInvoke"
         Effect   = "Allow"
         Action   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
         Resource = "arn:aws:bedrock:${var.aws_region}::foundation-model/*"
       },
       {
-        Sid    = "EventDrivenPublishing"
-        Effect = "Allow"
-        Action = ["sns:Publish", "sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage"]
-        Resource = [
-          var.sns_alerts_topic_arn != "" ? var.sns_alerts_topic_arn : "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.project}-*",
-          var.sqs_gps_queue_arn != "" ? var.sqs_gps_queue_arn : "arn:aws:sqs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.project}-*"
-        ]
+        Sid      = "EventDrivenPublishing"
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = var.sns_alerts_topic_arn != "" ? var.sns_alerts_topic_arn : "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.project}-*"
       },
       {
         Sid      = "CloudWatchAuditLogs"
         Effect   = "Allow"
         Action   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
         Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/fleetops/*:*"
-      },
-      {
-        Sid      = "DynamoDBAccess"
-        Effect   = "Allow"
-        Action   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:Query", "dynamodb:Scan", "dynamodb:UpdateItem"]
-        Resource = var.dynamodb_telemetry_arn != "" ? var.dynamodb_telemetry_arn : "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${var.project}-*"
       }
     ]
   })
 }
 
-# ── Lambda Execution Role ─────────────────────────────────────
 resource "aws_iam_role" "lambda" {
   name = "${local.name_prefix}-lambda-role"
 
@@ -208,9 +198,6 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-# ── AWS DevOps Agent Role ─────────────────────────────────────
-# Assumed by the AWS DevOps Agent service to read FleetOps infrastructure.
-# Role ARN is entered in the Agent Space console configuration.
 resource "aws_iam_role" "devops_agent" {
   name = "${local.name_prefix}-devops-agent-role"
 
@@ -253,12 +240,6 @@ resource "aws_iam_role_policy" "lambda_app" {
         Effect   = "Allow"
         Action   = ["sns:Publish"]
         Resource = "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.project}-*"
-      },
-      {
-        Sid      = "SQSSend"
-        Effect   = "Allow"
-        Action   = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
-        Resource = "arn:aws:sqs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.project}-*"
       },
       {
         Sid      = "SecretsRead"

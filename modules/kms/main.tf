@@ -1,9 +1,3 @@
-# =============================================================
-# Module: kms  |  Phase: 2A
-# 4 Customer Managed Keys — one per concern
-# Separation ensures a compromised key doesn't expose everything
-# =============================================================
-
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
@@ -29,7 +23,6 @@ locals {
   })
 }
 
-# ── RDS Encryption Key ────────────────────────────────────────
 resource "aws_kms_key" "rds" {
   description             = "FleetOps RDS PostgreSQL encryption key"
   deletion_window_in_days = 30
@@ -43,7 +36,6 @@ resource "aws_kms_alias" "rds" {
   target_key_id = aws_kms_key.rds.key_id
 }
 
-# ── Secrets Manager Encryption Key ───────────────────────────
 resource "aws_kms_key" "secrets" {
   description             = "FleetOps Secrets Manager encryption key"
   deletion_window_in_days = 30
@@ -57,7 +49,6 @@ resource "aws_kms_alias" "secrets" {
   target_key_id = aws_kms_key.secrets.key_id
 }
 
-# ── S3 Documents Encryption Key ───────────────────────────────
 resource "aws_kms_key" "s3" {
   description             = "FleetOps S3 vehicle documents encryption key"
   deletion_window_in_days = 30
@@ -71,7 +62,6 @@ resource "aws_kms_alias" "s3" {
   target_key_id = aws_kms_key.s3.key_id
 }
 
-# ── Terraform State Encryption Key ────────────────────────────
 resource "aws_kms_key" "terraform_state" {
   description             = "FleetOps Terraform remote state encryption key"
   deletion_window_in_days = 30

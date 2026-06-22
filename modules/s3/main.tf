@@ -1,9 +1,3 @@
-# =============================================================
-# Module: s3  |  Phase: 2A
-# Vehicle documents bucket — KMS-encrypted, versioned, private
-# Use cases: Insurance, RC Book, Permits, vehicle photo uploads
-# =============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
@@ -20,7 +14,6 @@ resource "aws_s3_bucket" "vehicle_docs" {
   tags   = merge(local.common_tags, { Name = "${local.name_prefix}-vehicle-docs" })
 }
 
-# Block all public access — documents are private
 resource "aws_s3_bucket_public_access_block" "vehicle_docs" {
   bucket                  = aws_s3_bucket.vehicle_docs.id
   block_public_acls       = true
@@ -29,7 +22,6 @@ resource "aws_s3_bucket_public_access_block" "vehicle_docs" {
   restrict_public_buckets = true
 }
 
-# Server-side encryption with KMS CMK
 resource "aws_s3_bucket_server_side_encryption_configuration" "vehicle_docs" {
   bucket = aws_s3_bucket.vehicle_docs.id
 
@@ -42,13 +34,11 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "vehicle_docs" {
   }
 }
 
-# Versioning — enables recovery of overwritten/deleted documents
 resource "aws_s3_bucket_versioning" "vehicle_docs" {
   bucket = aws_s3_bucket.vehicle_docs.id
   versioning_configuration { status = "Enabled" }
 }
 
-# Lifecycle — move old versions to cheaper storage after 30 days
 resource "aws_s3_bucket_lifecycle_configuration" "vehicle_docs" {
   bucket = aws_s3_bucket.vehicle_docs.id
 
@@ -68,7 +58,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "vehicle_docs" {
   }
 }
 
-# CORS — allow frontend to upload directly via presigned URLs
 resource "aws_s3_bucket_cors_configuration" "vehicle_docs" {
   bucket = aws_s3_bucket.vehicle_docs.id
 

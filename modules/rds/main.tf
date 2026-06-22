@@ -1,8 +1,3 @@
-# =============================================================
-# Module: rds  |  Phase: 2A
-# db.t3.micro PostgreSQL — Free Tier, Single-AZ, KMS-encrypted
-# =============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {
@@ -16,7 +11,7 @@ locals {
 
 resource "aws_db_subnet_group" "main" {
   name       = "${local.name_prefix}-db-subnet-group"
-  subnet_ids = var.private_subnet_ids
+  subnet_ids = var.db_subnet_ids
   tags       = merge(local.common_tags, { Name = "${local.name_prefix}-db-subnet-group" })
 }
 

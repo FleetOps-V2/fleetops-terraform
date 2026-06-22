@@ -1,8 +1,3 @@
-# =============================================================
-# Module: eks/nodegroup  |  Phase: 2B
-# Managed Node Group — t3.small, private subnets only
-# =============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {

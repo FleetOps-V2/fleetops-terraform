@@ -1,9 +1,3 @@
-# =============================================================
-# Module: efs  |  Phase: 2A
-# Shared elastic file system for inspection/damage photos
-# and proof-of-delivery files — mounted into EKS pods via CSI
-# =============================================================
-
 locals {
   name_prefix = "${var.project}-${var.environment}"
   common_tags = {

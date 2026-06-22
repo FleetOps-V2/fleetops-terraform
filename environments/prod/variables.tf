@@ -13,8 +13,6 @@ variable "domain_name" {
   default = "fleetops.website"
 }
 
-# ── Networking ────────────────────────────────────────────────
-
 variable "vpc_cidr" {
   type        = string
   description = "CIDR block for the production VPC"
@@ -30,12 +28,16 @@ variable "private_subnet_cidrs" {
   default = ["10.2.10.0/24", "10.2.11.0/24"]
 }
 
+variable "db_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for the isolated database subnets (RDS + ElastiCache)"
+  default     = ["10.2.20.0/24", "10.2.21.0/24"]
+}
+
 variable "availability_zones" {
   type    = list(string)
   default = ["us-east-1a", "us-east-1b"]
 }
-
-# ── Database ──────────────────────────────────────────────────
 
 variable "db_instance_class" {
   type    = string
@@ -57,14 +59,10 @@ variable "enable_deletion_protection" {
   default = false
 }
 
-# ── Cache ─────────────────────────────────────────────────────
-
 variable "redis_node_type" {
   type    = string
   default = "cache.t3.micro"
 }
-
-# ── Secrets ───────────────────────────────────────────────────
 
 variable "jwt_secret" {
   type      = string
@@ -76,8 +74,6 @@ variable "github_pat" {
   sensitive   = true
   description = "GitHub PAT for ArgoCD to pull fleetops-deployments (stored in Secrets Manager)"
 }
-
-# ── EKS ──────────────────────────────────────────────────────
 
 variable "eks_cluster_version" {
   type    = string
@@ -126,8 +122,6 @@ variable "eks_public_access_cidrs" {
   description = "CIDR ranges allowed to reach the EKS API server. Restrict in production."
 }
 
-# ── ArgoCD & Services ─────────────────────────────────────────
-
 variable "argocd_repo_url" {
   type    = string
   default = "https://github.com/FleetOps-V2/fleetops-deployments.git"
@@ -157,4 +151,16 @@ variable "bedrock_access_key" {
 variable "bedrock_secret_key" {
   type      = string
   sensitive = true
+}
+
+variable "alert_emails" {
+  type        = list(string)
+  description = "Email addresses subscribed to SNS insurance and service alert topics."
+  default     = []
+}
+
+variable "alb_arn_suffix" {
+  type        = string
+  description = "ARN suffix of the ALB. Leave empty on first apply — 5xx alarm is skipped until ALB exists."
+  default     = ""
 }

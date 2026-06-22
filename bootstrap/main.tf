@@ -14,7 +14,6 @@ provider "aws" {
 
 data "aws_caller_identity" "bootstrap" {}
 
-# KMS Key for encrypting Terraform State
 resource "aws_kms_key" "state_key" {
   description             = "KMS key for encrypting Terraform state in S3"
   deletion_window_in_days = 30
@@ -42,7 +41,6 @@ resource "aws_kms_alias" "state_key_alias" {
   target_key_id = aws_kms_key.state_key.key_id
 }
 
-# S3 Bucket for Terraform State
 resource "aws_s3_bucket" "state_bucket" {
   #checkov:skip=CKV2_AWS_62:Event notifications not required for Terraform state bucket
   #checkov:skip=CKV_AWS_18:Access logging creates a circular dependency for the state bucket
@@ -57,7 +55,6 @@ resource "aws_s3_bucket" "state_bucket" {
   }
 }
 
-# Versioning for State Bucket
 resource "aws_s3_bucket_versioning" "state_versioning" {
   bucket = aws_s3_bucket.state_bucket.id
   versioning_configuration {
@@ -65,7 +62,6 @@ resource "aws_s3_bucket_versioning" "state_versioning" {
   }
 }
 
-# Server-Side Encryption for State Bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "state_encryption" {
   bucket = aws_s3_bucket.state_bucket.id
 
@@ -77,7 +73,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "state_encryption"
   }
 }
 
-# Public Access Block for State Bucket
 resource "aws_s3_bucket_public_access_block" "state_public_access" {
   bucket = aws_s3_bucket.state_bucket.id
 
@@ -87,7 +82,6 @@ resource "aws_s3_bucket_public_access_block" "state_public_access" {
   restrict_public_buckets = true
 }
 
-# S3 Object Ownership Controls
 resource "aws_s3_bucket_ownership_controls" "state_ownership" {
   bucket = aws_s3_bucket.state_bucket.id
 
@@ -96,7 +90,6 @@ resource "aws_s3_bucket_ownership_controls" "state_ownership" {
   }
 }
 
-# S3 Bucket Policy to enforce TLS
 resource "aws_s3_bucket_policy" "state_policy" {
   bucket = aws_s3_bucket.state_bucket.id
   policy = jsonencode({
@@ -121,7 +114,6 @@ resource "aws_s3_bucket_policy" "state_policy" {
   })
 }
 
-# DynamoDB Lock Table
 resource "aws_dynamodb_table" "lock_table" {
   name         = var.lock_table_name
   billing_mode = "PAY_PER_REQUEST"
@@ -147,7 +139,6 @@ resource "aws_dynamodb_table" "lock_table" {
   }
 }
 
-# ── ECR Repositories ─────────────────────────────────────────────
 # Kept in bootstrap so images survive terraform destroy/apply cycles
 # on the main environment. Repos are cheap; recreating them loses all
 # pushed images and breaks GitOps tag references in Helm values.

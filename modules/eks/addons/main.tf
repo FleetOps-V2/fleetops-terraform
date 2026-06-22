@@ -1,15 +1,3 @@
-# =============================================================
-# Module: eks/addons  |  Phase: 2B
-# Installs Helm-based add-ons into the EKS cluster:
-#   1. AWS Load Balancer Controller   — creates ALBs from Ingress
-#   2. External Secrets Operator      — syncs Secrets Manager → k8s Secrets
-#   3. Metrics Server                 — kubectl top, HPA
-#   4. Cluster Autoscaler             — adds/removes t3.small nodes
-#
-# Provider note: helm and kubernetes providers are configured
-# dynamically from the cluster outputs — see versions.tf
-# =============================================================
-
 locals {
   name_prefix  = "${var.project}-${var.environment}"
   cluster_name = "${local.name_prefix}-eks"
@@ -22,7 +10,6 @@ locals {
   }
 }
 
-# ── IRSA Role for AWS Load Balancer Controller ────────────────
 data "aws_caller_identity" "current" {}
 
 resource "aws_iam_role" "alb_controller" {
@@ -138,7 +125,6 @@ resource "aws_iam_role_policy_attachment" "alb_controller" {
   policy_arn = aws_iam_policy.alb_controller.arn
 }
 
-# ── IRSA Role for Cluster Autoscaler ─────────────────────────
 resource "aws_iam_role" "cluster_autoscaler" {
   name = "${local.name_prefix}-cluster-autoscaler-role"
 
@@ -190,7 +176,6 @@ resource "aws_iam_role_policy" "cluster_autoscaler" {
   })
 }
 
-# ── IRSA Role for External Secrets Operator ───────────────────
 resource "aws_iam_role" "external_secrets" {
   name = "${local.name_prefix}-external-secrets-role"
 
@@ -248,7 +233,6 @@ resource "aws_iam_role_policy" "external_secrets" {
   })
 }
 
-# ── Helm: AWS Load Balancer Controller ───────────────────────
 resource "helm_release" "aws_load_balancer_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
@@ -286,7 +270,6 @@ resource "helm_release" "aws_load_balancer_controller" {
   }
 }
 
-# ── Helm: External Secrets Operator ──────────────────────────
 resource "helm_release" "external_secrets" {
   name       = "external-secrets"
   repository = "https://charts.external-secrets.io"
@@ -316,7 +299,6 @@ resource "helm_release" "external_secrets" {
   depends_on = [helm_release.aws_load_balancer_controller]
 }
 
-# ── Helm: Metrics Server ──────────────────────────────────────
 resource "helm_release" "metrics_server" {
   name       = "metrics-server"
   repository = "https://kubernetes-sigs.github.io/metrics-server"
@@ -330,7 +312,6 @@ resource "helm_release" "metrics_server" {
   }
 }
 
-# ── Helm: Cluster Autoscaler ──────────────────────────────────
 resource "helm_release" "cluster_autoscaler" {
   name       = "cluster-autoscaler"
   repository = "https://kubernetes.github.io/autoscaler"
@@ -368,7 +349,6 @@ resource "helm_release" "cluster_autoscaler" {
   }
 }
 
-# -- Helm: ArgoCD (GitOps) ---------------------------------------------------
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -454,9 +434,6 @@ resource "kubernetes_manifest" "argocd_root_app" {
   depends_on = [helm_release.argocd, kubernetes_secret.argocd_repo]
 }
 
-# -- EKS Managed Add-on: Amazon CloudWatch Observability ---------------------
-# Installs CloudWatch Agent + Container Insights so that pod-level CPU,
-# memory, and network metrics flow into CloudWatch.
 # Without this addon, "Pods --> Metrics --> CloudWatch" does NOT work.
 resource "aws_eks_addon" "cloudwatch_observability" {
   cluster_name             = var.cluster_name
@@ -496,7 +473,6 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
-# -- ArgoCD repo credentials (GitHub PAT from Secrets Manager) ---------------
 # Recreated automatically on every terraform apply — no manual kubectl needed.
 # Token is stored in Secrets Manager, never in Git or tfvars.
 data "aws_secretsmanager_secret_version" "github_pat" {
@@ -549,10 +525,6 @@ resource "kubernetes_secret" "bedrock" {
   }
 }
 
-# -- ArgoCD Ingress (ALB) -----------------------------------------------------
-# Exposes the ArgoCD dashboard at argocd.<domain_name> over HTTPS.
-# Shares the "fleetops" ALB group with the main app — one ALB, host-based routing.
-# ArgoCD server runs --insecure (HTTP) because TLS terminates at the ALB.
 resource "kubernetes_ingress_v1" "argocd" {
   metadata {
     name      = "argocd-ingress"
@@ -588,6 +560,44 @@ resource "kubernetes_ingress_v1" "argocd" {
     }
   }
   depends_on = [helm_release.argocd, helm_release.aws_load_balancer_controller]
+}
+
+resource "aws_iam_role" "efs_csi_driver" {
+  name = "${local.name_prefix}-efs-csi-driver-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${var.oidc_provider_url}"
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${var.oidc_provider_url}:sub" = "system:serviceaccount:kube-system:efs-csi-controller-sa"
+          "${var.oidc_provider_url}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "efs_csi_driver" {
+  role       = aws_iam_role.efs_csi_driver.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
+}
+
+resource "aws_eks_addon" "efs_csi_driver" {
+  cluster_name             = var.cluster_name
+  addon_name               = "aws-efs-csi-driver"
+  addon_version            = "v2.0.7-eksbuild.1"
+  service_account_role_arn = aws_iam_role.efs_csi_driver.arn
+  tags                     = local.common_tags
+
+  depends_on = [helm_release.aws_load_balancer_controller]
 }
 
 # aws-for-fluent-bit EKS managed addon is not supported on Kubernetes 1.31.
