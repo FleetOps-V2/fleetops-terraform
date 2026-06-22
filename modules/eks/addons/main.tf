@@ -391,44 +391,50 @@ resource "helm_release" "argocd" {
   ]
 }
 
-# Bootstrap the ArgoCD Root Application via kubernetes_manifest.
-# additionalApplications was removed in ArgoCD Helm chart v6.x, so we create
-# the Application resource directly. On every terraform apply this is idempotent.
-resource "kubernetes_manifest" "argocd_root_app" {
-  manifest = {
-    apiVersion = "argoproj.io/v1alpha1"
-    kind       = "Application"
-    metadata = {
-      name      = "fleetops-root-prod"
-      namespace = "argocd"
-      labels = {
-        "app.kubernetes.io/name"        = "fleetops-root-prod"
-        "app.kubernetes.io/environment" = "prod"
-        "app.kubernetes.io/component"   = "root"
-      }
-      annotations = {
-        "argocd.argoproj.io/sync-wave" = "0"
-      }
-    }
-    spec = {
-      project = "default"
-      source = {
-        repoURL        = var.argocd_repo_url
-        targetRevision = "HEAD"
-        path           = "argocd/apps/prod"
-      }
-      destination = {
-        server    = "https://kubernetes.default.svc"
-        namespace = "argocd"
-      }
-      syncPolicy = {
-        automated = {
-          prune    = true
-          selfHeal = true
-        }
-        syncOptions = ["CreateNamespace=true"]
-      }
-    }
+# Bootstrap the ArgoCD root Application via local-exec rather than
+# kubernetes_manifest, which contacts the K8s API during plan to resolve CRD
+# schemas — breaking plan when the EKS cluster does not yet exist.
+# local-exec runs only on apply, and kubectl apply is idempotent.
+resource "terraform_data" "argocd_root_app" {
+  triggers_replace = [
+    var.argocd_repo_url,
+    var.cluster_name,
+    var.environment,
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    command     = <<EOT
+aws eks update-kubeconfig --name "${var.cluster_name}" --region "${var.aws_region}"
+kubectl apply -f - <<'MANIFEST'
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fleetops-root-${var.environment}
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: fleetops-root-${var.environment}
+    app.kubernetes.io/environment: ${var.environment}
+    app.kubernetes.io/component: root
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: ${var.argocd_repo_url}
+    targetRevision: HEAD
+    path: argocd/apps/${var.environment}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+MANIFEST
+EOT
   }
 
   depends_on = [helm_release.argocd, kubernetes_secret.argocd_repo]

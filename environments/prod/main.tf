@@ -55,6 +55,16 @@ provider "kubernetes" {
 
 data "aws_caller_identity" "current" {}
 
+# Resolved automatically after eks_addons provisions the ALB Ingress Controller
+# and the ArgoCD ingress triggers shared ALB creation (group: fleetops).
+data "aws_lb" "fleetops" {
+  tags = {
+    "elbv2.k8s.aws/cluster" = module.eks_cluster.cluster_name
+    "ingress.k8s.aws/stack" = "fleetops"
+  }
+  depends_on = [module.eks_addons]
+}
+
 module "kms" {
   source      = "../../modules/kms"
   project     = "fleetops"
@@ -84,7 +94,7 @@ module "iam" {
   k8s_namespace            = var.k8s_namespace
   k8s_service_account_name = var.k8s_service_account_name
 
-  sns_alerts_topic_arn   = module.sns.service_alerts_topic_arn
+  sns_alerts_topic_arn = module.sns.service_alerts_topic_arn
 }
 
 module "rds" {
@@ -101,12 +111,12 @@ module "rds" {
 }
 
 module "redis" {
-  source             = "../../modules/redis"
-  project            = "fleetops"
-  environment        = var.environment
-  db_subnet_ids      = module.networking.database_subnet_ids
-  redis_sg_id        = module.networking.redis_sg_id
-  redis_node_type    = var.redis_node_type
+  source          = "../../modules/redis"
+  project         = "fleetops"
+  environment     = var.environment
+  db_subnet_ids   = module.networking.database_subnet_ids
+  redis_sg_id     = module.networking.redis_sg_id
+  redis_node_type = var.redis_node_type
 }
 
 module "s3" {
@@ -235,31 +245,27 @@ resource "aws_vpc_security_group_ingress_rule" "alb_to_pods_80" {
 }
 
 resource "aws_route53_record" "origin_alb_alias" {
-  #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
-  count = var.origin_alb_dns != "" ? 1 : 0
-
+  #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB; resolved via data.aws_lb after eks_addons
   zone_id = module.route53.zone_id
   name    = "origin.${var.domain_name}"
   type    = "A"
 
   alias {
-    name                   = var.origin_alb_dns
-    zone_id                = "Z35SXDOTRQ7X7K"
+    name                   = data.aws_lb.fleetops.dns_name
+    zone_id                = data.aws_lb.fleetops.zone_id
     evaluate_target_health = true
   }
 }
 
 resource "aws_route53_record" "argocd" {
-  #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB provisioned by the ALB Ingress Controller after first deploy; not trackable by Terraform
-  count = var.origin_alb_dns != "" ? 1 : 0
-
+  #checkov:skip=CKV2_AWS_23:Alias target is the K8s ALB; resolved via data.aws_lb after eks_addons
   zone_id = module.route53.zone_id
   name    = "argocd.${var.domain_name}"
   type    = "A"
 
   alias {
-    name                   = var.origin_alb_dns
-    zone_id                = "Z35SXDOTRQ7X7K"
+    name                   = data.aws_lb.fleetops.dns_name
+    zone_id                = data.aws_lb.fleetops.zone_id
     evaluate_target_health = true
   }
 }
@@ -270,6 +276,17 @@ module "sns" {
   environment     = var.environment
   kms_sns_key_arn = module.kms.events_key_arn
   alert_emails    = var.alert_emails
+}
+
+module "ssm" {
+  source                  = "../../modules/ssm"
+  project                 = "fleetops"
+  environment             = var.environment
+  redis_endpoint          = module.redis.redis_endpoint
+  cors_allowed_origins    = "https://${var.domain_name}"
+  app_base_url            = "https://${var.domain_name}"
+  insurance_sns_topic_arn = module.sns.insurance_alerts_topic_arn
+  service_sns_topic_arn   = module.sns.service_alerts_topic_arn
 }
 
 module "eventbridge" {

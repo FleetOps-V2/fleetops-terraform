@@ -84,7 +84,7 @@ module "iam" {
   k8s_namespace            = var.k8s_namespace
   k8s_service_account_name = var.k8s_service_account_name
 
-  sns_alerts_topic_arn   = module.sns.service_alerts_topic_arn
+  sns_alerts_topic_arn = module.sns.service_alerts_topic_arn
 }
 
 module "rds" {
@@ -101,12 +101,12 @@ module "rds" {
 }
 
 module "redis" {
-  source             = "../../modules/redis"
-  project            = "fleetops"
-  environment        = var.environment
-  db_subnet_ids      = module.networking.database_subnet_ids
-  redis_sg_id        = module.networking.redis_sg_id
-  redis_node_type    = var.redis_node_type
+  source          = "../../modules/redis"
+  project         = "fleetops"
+  environment     = var.environment
+  db_subnet_ids   = module.networking.database_subnet_ids
+  redis_sg_id     = module.networking.redis_sg_id
+  redis_node_type = var.redis_node_type
 }
 
 module "s3" {

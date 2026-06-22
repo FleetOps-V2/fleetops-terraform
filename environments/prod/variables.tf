@@ -127,12 +127,6 @@ variable "argocd_repo_url" {
   default = "https://github.com/FleetOps-V2/fleetops-deployments.git"
 }
 
-variable "origin_alb_dns" {
-  type        = string
-  default     = ""
-  description = "DNS of the K8s-managed ALB. Empty until first Ingress is deployed."
-}
-
 variable "vehicle_service_url" {
   type    = string
   default = "http://fleetops-vehicle-service:8080"
