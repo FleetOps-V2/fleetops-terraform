@@ -59,10 +59,11 @@ jobs:
         id: plan
         working-directory: environments/${{ steps.env.outputs.dir }}
         env:
-          TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
-          TF_VAR_jwt_secret:  ${{ secrets.TF_VAR_JWT_SECRET }}
-          TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
-          TF_VAR_github_pat:  ${{ secrets.TF_VAR_GITHUB_PAT }}
+          TF_VAR_db_password:   ${{ secrets.TF_VAR_DB_PASSWORD }}
+          TF_VAR_jwt_secret:    ${{ secrets.TF_VAR_JWT_SECRET }}
+          TF_VAR_db_username:   ${{ secrets.TF_VAR_DB_USERNAME }}
+          TF_VAR_github_pat:    ${{ secrets.TF_VAR_GITHUB_PAT }}
+          TF_VAR_alert_emails:  '["${{ secrets.EMAIL_TO }}"]'
         run: |
           set +e
           terraform plan -no-color -out=tfplan 2>&1 | tee plan.txt
