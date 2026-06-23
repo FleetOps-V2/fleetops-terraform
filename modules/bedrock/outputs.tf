@@ -1,8 +1,4 @@
-output "bedrock_access_policy_arn" {
-  description = "ARN of the IAM policy granting Bedrock access"
-  value       = aws_iam_policy.bedrock_access.arn
+output "bedrock_invoke_role_arn" {
+  description = "ARN of BedrockInvokeRole — copy this to bedrock_invoke_role_arn in Account A prod.auto.tfvars"
+  value       = aws_iam_role.bedrock_invoke.arn
 }
-
-
-
-

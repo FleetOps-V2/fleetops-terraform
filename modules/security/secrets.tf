@@ -47,32 +47,6 @@ resource "aws_secretsmanager_secret_version" "jwt_secret_placeholder" {
   }
 }
 
-# Secrets Manager - Bedrock Cross-Account Credentials
-resource "aws_secretsmanager_secret" "bedrock_credentials" {
-  #checkov:skip=CKV2_AWS_57:Automatic rotation requires a rotation Lambda; cross-account Bedrock credentials rotated manually
-  name                    = "fleetops/${var.environment}/bedrock/credentials"
-  description             = "Cross-account Bedrock IAM credentials for Nova Lite"
-  kms_key_id              = aws_kms_key.secrets_key.arn
-  recovery_window_in_days = 7
-
-  tags = {
-    Name        = "fleetops-bedrock-credentials-${var.environment}"
-    Environment = var.environment
-  }
-}
-
-resource "aws_secretsmanager_secret_version" "bedrock_credentials" {
-  secret_id = aws_secretsmanager_secret.bedrock_credentials.id
-  secret_string = jsonencode({
-    access_key = var.bedrock_access_key
-    secret_key = var.bedrock_secret_key
-  })
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
-
 # SSM Parameter Store - Redis Endpoint
 resource "aws_ssm_parameter" "redis_endpoint" {
   name        = "/fleetops/${var.environment}/redis/endpoint"

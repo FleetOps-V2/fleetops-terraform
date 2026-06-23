@@ -403,37 +403,40 @@ resource "terraform_data" "argocd_root_app" {
   ]
 
   provisioner "local-exec" {
-    interpreter = ["bash", "-c"]
+    interpreter = ["PowerShell", "-Command"]
     command     = <<EOT
 aws eks update-kubeconfig --name "${var.cluster_name}" --region "${var.aws_region}"
-kubectl apply -f - <<'MANIFEST'
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: fleetops-root-${var.environment}
-  namespace: argocd
-  labels:
-    app.kubernetes.io/name: fleetops-root-${var.environment}
-    app.kubernetes.io/environment: ${var.environment}
-    app.kubernetes.io/component: root
-  annotations:
-    argocd.argoproj.io/sync-wave: "0"
-spec:
-  project: default
-  source:
-    repoURL: ${var.argocd_repo_url}
-    targetRevision: HEAD
-    path: argocd/apps/${var.environment}
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argocd
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-MANIFEST
+$f = [System.IO.Path]::GetTempFileName() + '.yaml'
+@(
+  'apiVersion: argoproj.io/v1alpha1',
+  'kind: Application',
+  'metadata:',
+  '  name: fleetops-root-${var.environment}',
+  '  namespace: argocd',
+  '  labels:',
+  '    app.kubernetes.io/name: fleetops-root-${var.environment}',
+  '    app.kubernetes.io/environment: ${var.environment}',
+  '    app.kubernetes.io/component: root',
+  '  annotations:',
+  '    argocd.argoproj.io/sync-wave: "0"',
+  'spec:',
+  '  project: default',
+  '  source:',
+  '    repoURL: ${var.argocd_repo_url}',
+  '    targetRevision: HEAD',
+  '    path: argocd/apps/${var.environment}',
+  '  destination:',
+  '    server: https://kubernetes.default.svc',
+  '    namespace: argocd',
+  '  syncPolicy:',
+  '    automated:',
+  '      prune: true',
+  '      selfHeal: true',
+  '    syncOptions:',
+  '      - CreateNamespace=true'
+) | Out-File $f -Encoding utf8
+kubectl apply -f $f
+Remove-Item $f -Force
 EOT
   }
 
@@ -501,34 +504,6 @@ resource "kubernetes_secret" "argocd_repo" {
   }
 
   depends_on = [helm_release.argocd]
-}
-
-resource "kubernetes_namespace" "fleetops_prod" {
-  count = var.bedrock_access_key != "" ? 1 : 0
-
-  metadata {
-    name = "fleetops-prod"
-  }
-
-  lifecycle {
-    # ArgoCD adds its own labels/annotations to the namespace — ignore them to avoid perpetual drift
-    ignore_changes = [metadata[0].labels, metadata[0].annotations]
-  }
-
-  depends_on = [helm_release.argocd]
-}
-
-resource "kubernetes_secret" "bedrock" {
-  count = var.bedrock_access_key != "" ? 1 : 0
-
-  metadata {
-    name      = "fleetops-bedrock-secret"
-    namespace = kubernetes_namespace.fleetops_prod[0].metadata[0].name
-  }
-  data = {
-    BEDROCK_ACCESS_KEY = var.bedrock_access_key
-    BEDROCK_SECRET_KEY = var.bedrock_secret_key
-  }
 }
 
 resource "kubernetes_ingress_v1" "argocd" {

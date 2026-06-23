@@ -12,30 +12,40 @@ locals {
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-resource "aws_iam_policy" "bedrock_access" {
-  name        = "${local.name_prefix}-bedrock-access-policy"
-  description = "Allows invoking Claude models on Amazon Bedrock"
+# Deployed in Account B (Bedrock account).
+# Trusted by the IRSA role in Account A (EKS account) via sts:AssumeRole.
+resource "aws_iam_role" "bedrock_invoke" {
+  name        = "${local.name_prefix}-bedrock-invoke-role"
+  description = "Assumed by FleetOps app IRSA role in Account A to invoke Bedrock cross-account"
 
-  policy = jsonencode({
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream"
-        ]
-        Resource = [
-          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0",
-          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.claude-v2"
-        ]
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        AWS = var.eks_account_app_role_arn
       }
-    ]
+      Action = "sts:AssumeRole"
+    }]
   })
 
   tags = local.common_tags
 }
 
+resource "aws_iam_role_policy" "bedrock_invoke" {
+  name = "${local.name_prefix}-bedrock-invoke-policy"
+  role = aws_iam_role.bedrock_invoke.id
 
-
-
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "BedrockModelInvoke"
+      Effect = "Allow"
+      Action = [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ]
+      Resource = "*"
+    }]
+  })
+}

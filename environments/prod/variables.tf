@@ -137,14 +137,10 @@ variable "auth_service_url" {
   default = "http://fleetops-auth-service:8080"
 }
 
-variable "bedrock_access_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "bedrock_secret_key" {
-  type      = string
-  sensitive = true
+variable "bedrock_invoke_role_arn" {
+  type        = string
+  description = "ARN of BedrockInvokeRole in Account B. Set after running the bedrock-account Terraform."
+  default     = ""
 }
 
 variable "alert_emails" {

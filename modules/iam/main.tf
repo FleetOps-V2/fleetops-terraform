@@ -96,80 +96,82 @@ resource "aws_iam_role_policy" "app_secrets" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "SecretsManagerRead"
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ]
-        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/*"
-      },
-      {
-        Sid    = "KMSDecrypt"
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey"
-        ]
-        Resource = var.kms_key_arns
-      },
-      {
-        Sid    = "S3VehicleDocuments"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          "arn:aws:s3:::${var.project}-${var.environment}-vehicle-docs",
-          "arn:aws:s3:::${var.project}-${var.environment}-vehicle-docs/*"
-        ]
-      },
-      {
-        Sid    = "StepFunctionsWorkflow"
-        Effect = "Allow"
-        Action = [
-          "states:StartExecution",
-          "states:DescribeExecution",
-          "states:StopExecution"
-        ]
-        Resource = "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:${var.project}-*"
-      },
-      {
-        Sid    = "EFSClientAccess"
-        Effect = "Allow"
-        Action = [
-          "elasticfilesystem:ClientMount",
-          "elasticfilesystem:ClientWrite",
-          "elasticfilesystem:ClientRootAccess",
-          "elasticfilesystem:DescribeFileSystems",
-          "elasticfilesystem:DescribeMountTargets"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid      = "BedrockInvoke"
+    Statement = concat(
+      [
+        {
+          Sid    = "SecretsManagerRead"
+          Effect = "Allow"
+          Action = [
+            "secretsmanager:GetSecretValue",
+            "secretsmanager:DescribeSecret"
+          ]
+          Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project}/*"
+        },
+        {
+          Sid    = "KMSDecrypt"
+          Effect = "Allow"
+          Action = [
+            "kms:Decrypt",
+            "kms:GenerateDataKey"
+          ]
+          Resource = var.kms_key_arns
+        },
+        {
+          Sid    = "S3VehicleDocuments"
+          Effect = "Allow"
+          Action = [
+            "s3:GetObject",
+            "s3:PutObject",
+            "s3:DeleteObject",
+            "s3:ListBucket"
+          ]
+          Resource = [
+            "arn:aws:s3:::${var.project}-${var.environment}-vehicle-docs",
+            "arn:aws:s3:::${var.project}-${var.environment}-vehicle-docs/*"
+          ]
+        },
+        {
+          Sid    = "StepFunctionsWorkflow"
+          Effect = "Allow"
+          Action = [
+            "states:StartExecution",
+            "states:DescribeExecution",
+            "states:StopExecution"
+          ]
+          Resource = "arn:aws:states:${var.aws_region}:${data.aws_caller_identity.current.account_id}:stateMachine:${var.project}-*"
+        },
+        {
+          Sid    = "EFSClientAccess"
+          Effect = "Allow"
+          Action = [
+            "elasticfilesystem:ClientMount",
+            "elasticfilesystem:ClientWrite",
+            "elasticfilesystem:ClientRootAccess",
+            "elasticfilesystem:DescribeFileSystems",
+            "elasticfilesystem:DescribeMountTargets"
+          ]
+          Resource = "*"
+        },
+        {
+          Sid      = "EventDrivenPublishing"
+          Effect   = "Allow"
+          Action   = ["sns:Publish"]
+          Resource = var.sns_alerts_topic_arn != "" ? var.sns_alerts_topic_arn : "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.project}-*"
+        },
+        {
+          Sid      = "CloudWatchAuditLogs"
+          Effect   = "Allow"
+          Action   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
+          Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/fleetops/*:*"
+        }
+      ],
+      var.bedrock_invoke_role_arn != "" ? [{
+        Sid      = "BedrockCrossAccountAccess"
         Effect   = "Allow"
-        Action   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
-        Resource = "arn:aws:bedrock:${var.aws_region}::foundation-model/*"
-      },
-      {
-        Sid      = "EventDrivenPublishing"
-        Effect   = "Allow"
-        Action   = ["sns:Publish"]
-        Resource = var.sns_alerts_topic_arn != "" ? var.sns_alerts_topic_arn : "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${var.project}-*"
-      },
-      {
-        Sid      = "CloudWatchAuditLogs"
-        Effect   = "Allow"
-        Action   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
-        Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/fleetops/*:*"
-      }
-    ]
+        Action   = ["sts:AssumeRole"]
+        Resource = var.bedrock_invoke_role_arn
+      }] : []
+    )
   })
 }
 

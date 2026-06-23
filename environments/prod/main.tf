@@ -94,7 +94,8 @@ module "iam" {
   k8s_namespace            = var.k8s_namespace
   k8s_service_account_name = var.k8s_service_account_name
 
-  sns_alerts_topic_arn = module.sns.service_alerts_topic_arn
+  sns_alerts_topic_arn    = module.sns.service_alerts_topic_arn
+  bedrock_invoke_role_arn = var.bedrock_invoke_role_arn
 }
 
 module "rds" {
@@ -201,10 +202,7 @@ module "eks_addons" {
   acm_certificate_arn = module.acm.certificate_arn
   alb_sg_id           = module.networking.alb_sg_id
   domain_name         = var.domain_name
-  bedrock_access_key  = var.bedrock_access_key
-  bedrock_secret_key  = var.bedrock_secret_key
-
-  depends_on = [module.eks_nodegroup, module.secrets_manager]
+  depends_on          = [module.eks_nodegroup, module.secrets_manager]
 }
 
 resource "aws_vpc_security_group_ingress_rule" "rds_from_eks_cluster_sg" {

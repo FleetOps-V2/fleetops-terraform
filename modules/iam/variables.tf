@@ -46,6 +46,12 @@ variable "github_repo" {
   default     = "FleetOps-V2/fleetops-terraform"
 }
 
+variable "bedrock_invoke_role_arn" {
+  type        = string
+  description = "ARN of BedrockInvokeRole in Account B. When set, the app IRSA role gets sts:AssumeRole to invoke Bedrock cross-account."
+  default     = ""
+}
+
 
 
 
