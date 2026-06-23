@@ -20,7 +20,7 @@ eks_cluster_version    = "1.31"
 eks_node_instance_type = "m7i-flex.large"
 eks_node_min_size      = 2
 eks_node_max_size      = 5
-eks_node_desired_size  = 3
+eks_node_desired_size  = 2
 
 # Kubernetes
 k8s_namespace            = "fleetops-prod"
@@ -29,9 +29,9 @@ k8s_service_account_name = "fleetops-app"
 # ArgoCD
 argocd_repo_url = "https://github.com/FleetOps-V2/fleetops-deployments.git"
 
-# Lambda service URLs
-vehicle_service_url = "http://fleetops-vehicle-service:8080"
-auth_service_url    = "http://fleetops-auth-service:8080"
+# Lambda service URLs — must be the external ALB origin (Lambda is not in VPC)
+vehicle_service_url = "https://origin.fleetops.website"
+auth_service_url    = "https://origin.fleetops.website"
 
 # EKS cluster access — deployer user + GitHub Actions role (needed for Helm provider in CI/CD)
 admin_iam_user_arns = [
