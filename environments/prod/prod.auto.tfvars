@@ -35,4 +35,4 @@ admin_iam_user_arns = [
 bedrock_invoke_role_arn = "arn:aws:iam::612524168263:role/fleetops-prod-bedrock-invoke-role"
 
 alert_emails   = ["johannabyvannilam@gmail.com"]
-alb_arn_suffix = "app/k8s-fleetops-69397799c8/5301a396c437b887"
+alb_arn_suffix = "app/k8s-fleetops-69397799c8/4cfc8327e7d8ede3"
