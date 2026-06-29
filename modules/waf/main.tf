@@ -27,6 +27,52 @@ resource "aws_wafv2_web_acl" "main" {
   }
 
   rule {
+    name     = "AllowMediaUpload"
+    priority = 0
+
+    action {
+      allow {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          byte_match_statement {
+            search_string         = "/api/media/upload"
+            positional_constraint = "STARTS_WITH"
+            field_to_match {
+              uri_path {}
+            }
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+        statement {
+          byte_match_statement {
+            search_string         = "POST"
+            positional_constraint = "EXACTLY"
+            field_to_match {
+              method {}
+            }
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AllowMediaUploadMetric"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 1
 

@@ -198,8 +198,9 @@ jobs:
           albSgId: "${ALB_SG_ID}"
           hostedZoneId: "${HOSTED_ZONE_ID}"
           sfnArn: "${SFN_ARN}"
-          efsId: "${EFS_ID}"
-          efsAccessPointId: "${EFS_AP_ID}"
+          efs:
+            fileSystemId: "${EFS_ID}"
+            accessPointId: "${EFS_AP_ID}"
           EOF
 
       - name: Generate GitHub App token for deployments repo

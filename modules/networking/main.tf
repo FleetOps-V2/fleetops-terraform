@@ -309,11 +309,11 @@ resource "aws_security_group" "efs" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "NFS from EKS nodes"
-    from_port       = 2049
-    to_port         = 2049
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_nodes.id]
+    description = "NFS from VPC (EKS nodes use EKS-managed cluster SG, not eks_nodes_sg)"
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
   }
 
   egress {
