@@ -13,7 +13,7 @@ enable_deletion_protection = false
 
 redis_node_type = "cache.t3.micro"
 
-eks_cluster_version    = "1.31"
+eks_cluster_version    = "1.33"
 eks_node_instance_type = "m7i-flex.large"
 eks_node_min_size      = 2
 eks_node_max_size      = 5

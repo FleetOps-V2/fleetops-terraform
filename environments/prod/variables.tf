@@ -77,7 +77,7 @@ variable "github_pat" {
 
 variable "eks_cluster_version" {
   type    = string
-  default = "1.31"
+  default = "1.33"
 }
 
 variable "eks_node_instance_type" {

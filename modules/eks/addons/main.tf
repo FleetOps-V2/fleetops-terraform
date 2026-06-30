@@ -347,6 +347,10 @@ resource "helm_release" "cluster_autoscaler" {
     name  = "image.repository"
     value = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/registry.k8s.io/autoscaling/cluster-autoscaler"
   }
+  set {
+    name  = "image.tag"
+    value = "v1.33.0"
+  }
 }
 
 resource "helm_release" "argocd" {
@@ -445,11 +449,12 @@ EOT
 
 # Without this addon, "Pods --> Metrics --> CloudWatch" does NOT work.
 resource "aws_eks_addon" "cloudwatch_observability" {
-  cluster_name             = var.cluster_name
-  addon_name               = "amazon-cloudwatch-observability"
-  addon_version            = "v6.2.0-eksbuild.1"
-  service_account_role_arn = aws_iam_role.cloudwatch_agent.arn
-  tags                     = local.common_tags
+  cluster_name                = var.cluster_name
+  addon_name                  = "amazon-cloudwatch-observability"
+  addon_version               = "v6.2.0-eksbuild.1"
+  service_account_role_arn    = aws_iam_role.cloudwatch_agent.arn
+  resolve_conflicts_on_update = "OVERWRITE"
+  tags                        = local.common_tags
 
   # CloudWatch addon creates Service resources that trigger the ALB webhook.
   # Wait for ALB controller pods to be Running before starting the addon.
@@ -572,16 +577,17 @@ resource "aws_iam_role_policy_attachment" "efs_csi_driver" {
 }
 
 resource "aws_eks_addon" "efs_csi_driver" {
-  cluster_name             = var.cluster_name
-  addon_name               = "aws-efs-csi-driver"
-  addon_version            = "v2.0.7-eksbuild.1"
-  service_account_role_arn = aws_iam_role.efs_csi_driver.arn
-  tags                     = local.common_tags
+  cluster_name                = var.cluster_name
+  addon_name                  = "aws-efs-csi-driver"
+  addon_version               = "v2.0.7-eksbuild.1"
+  service_account_role_arn    = aws_iam_role.efs_csi_driver.arn
+  resolve_conflicts_on_update = "OVERWRITE"
+  tags                        = local.common_tags
 
   depends_on = [helm_release.aws_load_balancer_controller]
 }
 
-# aws-for-fluent-bit EKS managed addon is not supported on Kubernetes 1.31.
+# aws-for-fluent-bit EKS managed addon was not supported on Kubernetes 1.31/1.32.
 # Log shipping is handled by the amazon-cloudwatch-observability addon above,
 # which bundles the CloudWatch agent and Fluent Bit in a single package.
 # The IAM role below is retained for when Fluent Bit is deployed via Helm.
